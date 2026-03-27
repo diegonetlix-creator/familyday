@@ -35,12 +35,6 @@ export default function Login() {
     setLoading(false)
   }
 
-  const fillDemo = (role) => {
-    if (role === 'admin') setForm({ email: 'admin@familyday.com', password: 'admin123' })
-    if (role === 'child') setForm({ email: 'sofia@familyday.com', password: 'sofia123' })
-    setError('')
-  }
-
   return (
     <div className="anim-fade-in" style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-page)' }}>
       <div className="login-left-col anim-fade-in" style={{ width: '40%', background: 'var(--bg-sidebar)', backgroundImage: 'radial-gradient(rgba(167,139,250,.15) 1px, transparent 1px)', backgroundSize: '20px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: 32, animationDelay: '.05s' }}>
@@ -158,16 +152,6 @@ export default function Login() {
             </button>
           </form>
 
-          <div style={{ marginTop: 32, borderTop: '1px solid var(--gray-100)', paddingTop: 20 }}>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12, textAlign: 'center' }}>
-              Acceso rápido para demo:
-            </div>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button type="button" className="btn btn-secondary btn-sm" style={{ flex: 1, justifyContent: 'center' }} onClick={() => fillDemo('admin')}>Demo Admin 👑</button>
-              <button type="button" className="btn btn-secondary btn-sm" style={{ flex: 1, justifyContent: 'center' }} onClick={() => fillDemo('child')}>Demo Hijo ⭐</button>
-            </div>
-          </div>
-          
           <div style={{ marginTop: 24, fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center', display: 'none' }} className="mobile-only-link">
             ¿No tienes cuenta? <Link to="/register" style={{ color: 'var(--purple-500)', textDecoration: 'none', fontWeight: 700 }}>Regístrate</Link>
             <style>{`@media (max-width: 768px) { .mobile-only-link { display: block !important; } }`}</style>
