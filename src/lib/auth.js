@@ -112,9 +112,19 @@ export const Auth = {
   async register(data) {
     try {
       const cleanEmail = data.email.trim().toLowerCase()
+      
+      // We pass the metadata to Supabase Auth so the DB trigger can use it
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: cleanEmail,
         password: data.password,
+        options: {
+          data: {
+            name: data.name,
+            role: data.role,
+            color: data.color || '#3b82f6',
+            age: data.age || null
+          }
+        }
       })
 
       if (authError) {
@@ -124,34 +134,33 @@ export const Auth = {
 
       if (!authData.user) return { ok: false, error: 'No se pudo crear el usuario.' }
 
-      // If no family_id in data, and it's an admin, we produce one
-      // But we should first check if there is an invitation for this email
-      const invData = await dbGetOne('fd_members', { email: cleanEmail, status: 'invited' })
-      const familyId = invData?.family_id || (data.role === 'admin' ? crypto.randomUUID() : null)
+      // Wait a moment for the database trigger to complete sync
+      await new Promise(r => setTimeout(r, 800))
 
-      const member = await dbInsert('fd_members', {
-        id: authData.user.id,
-        name: data.name,
-        age: data.age || null,
-        role: data.role,
-        color: data.color || '#3b82f6',
-        email: cleanEmail,
-        status: data.role === 'child' ? 'invited' : 'active',
-        total_points: 0,
-        redeemed_points: 0,
-        family_id: familyId
-      }, authData.session?.access_token)
-
+      // Try to fetch the profile created by the trigger
+      let member = await dbGetOne('fd_members', { email: cleanEmail })
+      
       if (!member) {
-         return { ok: false, error: 'Usuario creado pero falló el perfil.' }
+         // Fallback if the trigger hasn't finished or RLS blocked the read
+         if (!authData.session) {
+            return { 
+              ok: true, 
+              user: { 
+                email: cleanEmail, 
+                role: data.role, 
+                status: data.role === 'child' ? 'invited' : 'active' 
+              } 
+            }
+         }
+         return { ok: false, error: 'Usuario creado pero falló la sincronización del perfil.' }
       }
 
-      if (member.status === 'active') {
+      if (member.status === 'active' && authData.session) {
         localStorage.setItem('fd_session', JSON.stringify({
           id: member.id, userId: member.id, role: member.role, name: member.name, email: member.email, color: member.color,
           family_id: member.family_id, accessToken: authData.session.access_token
         }))
-      } else {
+      } else if (member.status === 'invited' || !authData.session) {
         await supabase.auth.signOut()
       }
       
