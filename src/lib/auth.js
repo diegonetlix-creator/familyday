@@ -271,9 +271,8 @@ export const Invitations = {
     let member;
 
     if (existingProfile) {
-      // Lo movemos a esta familia y lo activamos
+      // Ya existe en fd_members: solo actualizamos family_id y datos del perfil
       member = await dbUpdate('fd_members', existingProfile.id, {
-        id: authId,
         family_id: familyId,
         status: 'active',
         name: memberPayload.name || existingProfile.name,
