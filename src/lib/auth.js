@@ -241,58 +241,71 @@ export const Invitations = {
       throw new Error("Se requiere Service Role Key (VITE_SUPABASE_SERVICE_ROLE_KEY) para enviar invitaciones automáticas por correo desde Supabase.")
     }
 
-    let authId = null;
-    let isAlreadyRegistered = false;
+    const currentUser = Auth.getCurrentUser();
+    const familyId = currentUser?.family_id;
+    const cleanEmail = memberPayload.email.trim().toLowerCase();
 
-    // 1. Intentar invitar o detectar si ya existe
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(memberPayload.email)
-    
-    if (authError) {
-      if (authError.message.toLowerCase().includes('already') || authError.message.toLowerCase().includes('registrado')) {
-        isAlreadyRegistered = true;
-        // Si ya existe, listamos usuarios para encontrar su ID
-        const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
-        const existingUser = listData?.users?.find(u => u.email.toLowerCase() === memberPayload.email.toLowerCase());
-        if (!existingUser) throw new Error("El usuario ya está registrado en Auth pero no pudimos validar su ID. Verifica el correo.");
-        authId = existingUser.id;
-      } else {
-        console.error('Error enviando invitación:', authError)
-        throw authError;
-      }
-    } else {
+    // PASO 1: Verificar si ya existe en auth.users (SIN intentar invitar primero)
+    const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
+    const existingAuthUser = listData?.users?.find(u => u.email.toLowerCase() === cleanEmail);
+    const isAlreadyRegistered = !!existingAuthUser;
+
+    // PASO 2: Verificar si ya tiene perfil en fd_members (bypassing RLS con admin)
+    const { data: profileRows } = await supabaseAdmin
+      .from('fd_members')
+      .select('*')
+      .eq('email', cleanEmail)
+      .limit(1);
+    const existingProfile = profileRows?.[0] || null;
+
+    let authId = existingAuthUser?.id || null;
+
+    // PASO 3: Si NO está registrado → enviar invitación por correo
+    if (!isAlreadyRegistered) {
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(memberPayload.email);
+      if (authError) throw authError;
       authId = authData.user.id;
     }
 
-    const user = Auth.getCurrentUser();
-    const familyId = user?.family_id;
-
-    // 2. Vincular o crear el perfil en la familia (fd_members)
-    let existingProfile = await dbGetOne('fd_members', { email: memberPayload.email.trim().toLowerCase() });
     let member;
 
     if (existingProfile) {
-      // Ya existe en fd_members: solo actualizamos family_id y datos del perfil
-      member = await dbUpdate('fd_members', existingProfile.id, {
-        family_id: familyId,
-        status: 'active',
-        name: memberPayload.name || existingProfile.name,
-        role: memberPayload.role || existingProfile.role,
-        color: memberPayload.color || existingProfile.color
-      });
+      // Ya tiene perfil → solo vincular a esta familia (sin tocar el id ni enviar correo)
+      const { data: updated, error: updateErr } = await supabaseAdmin
+        .from('fd_members')
+        .update({
+          family_id: familyId,
+          status: 'active',
+          name: memberPayload.name || existingProfile.name,
+          role: memberPayload.role || existingProfile.role,
+          color: memberPayload.color || existingProfile.color
+        })
+        .eq('id', existingProfile.id)
+        .select()
+        .single();
+      if (updateErr) throw new Error(updateErr.message);
+      member = updated;
     } else {
-      // Creamos perfil nuevo vinculado a esta familia
-      member = await dbInsert('fd_members', {
-        id: authId,
-        name: memberPayload.name,
-        age: memberPayload.age || null,
-        role: memberPayload.role,
-        color: memberPayload.color,
-        email: memberPayload.email,
-        status: isAlreadyRegistered ? 'active' : 'invited',
-        total_points: 0,
-        redeemed_points: 0,
-        family_id: familyId
-      });
+      // No tiene perfil → crear uno nuevo vinculado a esta familia
+      const { data: inserted, error: insertErr } = await supabaseAdmin
+        .from('fd_members')
+        .insert({
+          id: authId,
+          name: memberPayload.name,
+          age: memberPayload.age || null,
+          role: memberPayload.role,
+          color: memberPayload.color,
+          email: memberPayload.email,
+          status: isAlreadyRegistered ? 'active' : 'invited',
+          total_points: 0,
+          redeemed_points: 0,
+          family_id: familyId
+        })
+        .select()
+        .single();
+
+      if (insertErr) throw new Error(insertErr.message);
+      member = inserted;
     }
 
     if (!member) throw new Error("Error guardando el perfil del miembro.");
