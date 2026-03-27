@@ -72,6 +72,22 @@ async function dbSelect(table, filters = {}) {
 }
 
 export const Auth = {
+  async loginWithGoogle() {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      })
+      if (error) return { ok: false, error: error.message }
+      return { ok: true }
+    } catch (err) {
+      console.error('Google login error:', err)
+      return { ok: false, error: 'Error al conectar con Google.' }
+    }
+  },
+
   async login(email, password) {
     try {
       const cleanEmail = email.trim().toLowerCase()
