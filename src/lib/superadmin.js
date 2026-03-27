@@ -24,21 +24,8 @@ export const SuperAdmin = {
 
   getGlobalUsers: async () => {
     try {
-      // Use direct REST fetch to bypass potential supabase-js hangs
-      const { data: { session } } = await (await import('./store.js')).supabase.auth.getSession()
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/fd_members?select=*&order=created_at.desc`
-      const key = import.meta.env.VITE_SUPABASE_ANON_KEY
-      
-      const res = await fetch(url, { 
-        headers: { 
-          'apikey': key, 
-          'Authorization': `Bearer ${session?.access_token}`,
-          'Content-Type': 'application/json'
-        } 
-      })
-      
-      if (!res.ok) return []
-      return await res.json()
+      const { FamilyMember } = await import('./store.js')
+      return await FamilyMember.list('created_at.desc', 1000, true) // true = global
     } catch (err) {
       console.error("Error fetching global users:", err)
       return []
@@ -47,36 +34,23 @@ export const SuperAdmin = {
 
   getStatsFallback: async () => {
     try {
-      const { data: { session } } = await (await import('./store.js')).supabase.auth.getSession()
-      const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1`
-      const key = import.meta.env.VITE_SUPABASE_ANON_KEY
-      const headers = { 
-        'apikey': key, 
-        'Authorization': `Bearer ${session?.access_token}`,
-        'Prefer': 'count=exact'
-      }
-
-      const fetchCount = async (table, filter = '') => {
-        const res = await fetch(`${baseUrl}/${table}?select=id${filter}&limit=1`, { headers })
-        const range = res.headers.get('content-range')
-        return range ? parseInt(range.split('/')[1]) : 0
-      }
-
+      const { FamilyMember, Task, TaskCompletion } = await import('./store.js')
+      
       const [users, admins, children, tasks, completions] = await Promise.all([
-        fetchCount('fd_members'),
-        fetchCount('fd_members', '&role=eq.admin'),
-        fetchCount('fd_members', '&role=eq.child'),
-        fetchCount('fd_tasks'),
-        fetchCount('fd_completions', '&status=eq.aprobada')
+        FamilyMember.list(undefined, undefined, true),
+        FamilyMember.list(undefined, undefined, true).then(m => m.filter(u => u.role === 'admin')),
+        FamilyMember.list(undefined, undefined, true).then(m => m.filter(u => u.role === 'child')),
+        Task.list(undefined, undefined, true),
+        TaskCompletion.list(undefined, undefined, true)
       ])
 
       return {
-        totalUsers: users,
-        totalAdmins: admins,
-        totalChildren: children,
-        totalTasks: tasks,
-        totalRewardsDelivered: completions,
-        aiUsageCount: 0 // Cannot fetch without specialized table
+        totalUsers: users.length,
+        totalAdmins: admins.length,
+        totalChildren: children.length,
+        totalTasks: tasks.length,
+        totalRewardsDelivered: completions.filter(c => c.status === 'aprobada').length,
+        aiUsageCount: 0
       }
     } catch (err) {
       console.error("Fallback stats error:", err)

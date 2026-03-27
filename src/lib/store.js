@@ -72,8 +72,16 @@ const getHeaders = async () => {
 }
 
 // GET rows from a table
-async function dbSelect(table, { order, limit, filters } = {}) {
+async function dbSelect(table, { order, limit, filters, isGlobal = false } = {}) {
   let url = `${API_URL}/${table}?select=*`
+  const session = JSON.parse(localStorage.getItem('fd_session') || '{}')
+  const familyId = session.family_id
+  
+  // Apply family_id filter by default if not global and not in the table
+  if (!isGlobal && familyId && !filters?.family_id) {
+    url += `&family_id=eq.${familyId}`
+  }
+
   if (filters) {
     for (const [col, val] of Object.entries(filters)) {
       url += `&${col}=eq.${val}`
@@ -197,7 +205,7 @@ const mapFrom = (obj) => {
 // === DATA MODELS ===
 
 export const FamilyMember = {
-  list:   (sort, limit)  => dbSelect('fd_members', { order: sort, limit }),
+  list:   (sort, limit, global = false)  => dbSelect('fd_members', { order: sort, limit, isGlobal: global }),
   get:    async (id)     => { const rows = await dbSelect('fd_members', { filters: { id } }); return rows[0] || null },
   create: (data)         => dbInsert('fd_members', data),
   update: (id, data)     => dbUpdate('fd_members', id, data),
@@ -205,30 +213,30 @@ export const FamilyMember = {
 }
 
 export const Task = {
-  list:   (sort, limit)  => dbSelect('fd_tasks', { order: sort, limit }),
-  filter: (whereObj)     => dbSelect('fd_tasks', { filters: whereObj }),
+  list:   (sort, limit, global = false)  => dbSelect('fd_tasks', { order: sort, limit, isGlobal: global }),
+  filter: (whereObj, global = false)     => dbSelect('fd_tasks', { filters: whereObj, isGlobal: global }),
   create: (data)         => dbInsert('fd_tasks', data),
   update: (id, data)     => dbUpdate('fd_tasks', id, data),
   delete: (id)           => dbDelete('fd_tasks', id)
 }
 
 export const TaskCompletion = {
-  list:         (sort = '-createdAt', limit = 100) => dbSelect('fd_completions', { order: sort, limit }),
+  list:         (sort = '-createdAt', limit = 100, global = false) => dbSelect('fd_completions', { order: sort, limit, isGlobal: global }),
   countPending: ()       => dbCount('fd_completions', { status: 'pendiente' }),
   create:       (data)   => dbInsert('fd_completions', data),
   update:       (id, data) => dbUpdate('fd_completions', id, data)
 }
 
 export const Reward = {
-  list:   (sort, limit)  => dbSelect('fd_rewards', { order: sort, limit }),
-  filter: (whereObj)     => dbSelect('fd_rewards', { filters: whereObj }),
+  list:   (sort, limit, global = false)  => dbSelect('fd_rewards', { order: sort, limit, isGlobal: global }),
+  filter: (whereObj, global = false)     => dbSelect('fd_rewards', { filters: whereObj, isGlobal: global }),
   create: (data)         => dbInsert('fd_rewards', data),
   update: (id, data)     => dbUpdate('fd_rewards', id, data),
   delete: (id)           => dbDelete('fd_rewards', id)
 }
 
 export const RewardRedemption = {
-  list:   (sort, limit)  => dbSelect('fd_redemptions', { order: sort, limit }),
+  list:   (sort, limit, global = false)  => dbSelect('fd_redemptions', { order: sort, limit, isGlobal: global }),
   create: (data)         => dbInsert('fd_redemptions', data)
 }
 
