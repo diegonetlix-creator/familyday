@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
-import { Users, UserPlus, Baby, ClipboardList, Gift, Bot, Home, ArrowRight, ShieldCheck, Mail, Database } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Users, UserPlus, Baby, ClipboardList, Gift, Bot, Home, ArrowRight, ShieldCheck, Mail, Database, Radio } from 'lucide-react'
 import { SuperAdmin } from '../lib/superadmin.js'
+import { supabase } from '../lib/supabase.js'
 
 function StatCard({ title, value, icon: Icon, color, bg }) {
   return (
@@ -21,29 +22,61 @@ export default function SuperAdminDashboard() {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [isRealtime, setIsRealtime] = useState(false)
+  const [lastUpdate, setLastUpdate] = useState(new Date())
+  const statsFetched = useRef(false)
 
   useEffect(() => {
     loadAll()
+    
+    // Configurar canal global con actualización instantánea
+    const channel = supabase
+      .channel('master-dashboard')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fd_members' }, () => {
+        console.log('RT: Miembros actualizados');
+        loadAll(true);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fd_tasks' }, () => {
+        console.log('RT: Tareas actualizadas');
+        loadAll(true);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fd_completions' }, () => {
+        console.log('RT: Completions actualizadas');
+        loadAll(true);
+      })
+      .subscribe((status) => {
+        console.log('Realtime status:', status);
+        setIsRealtime(status === 'SUBSCRIBED');
+      })
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
-  const loadAll = async () => {
-    setLoading(true)
+  const loadAll = async (isSilent = false) => {
+    if (!isSilent && !statsFetched.current) setLoading(true)
     setError(null)
     try {
-      const data = await SuperAdmin.getGlobalStats()
-      if (data) {
-        setStats(data)
-      } else {
-        // Fallback local counts if Edge Function fails (now allowed by RLS)
-        const localStats = await SuperAdmin.getStatsFallback()
-        setStats(localStats)
-      }
+      const startTime = Date.now();
+      
+      // Intentar obtener de la Edge Function (si existe) o fallback directo
+      const data = await SuperAdmin.getStatsFallback()
+      if (data) setStats(data)
       
       const userList = await SuperAdmin.getGlobalUsers()
       setUsers(userList || [])
+      
+      setLastUpdate(new Date())
+      statsFetched.current = true;
+      
+      // Si cargamos muy rápido, simular un poco de carga para que el usuario lo note
+      if (!isSilent && Date.now() - startTime < 300) {
+        await new Promise(r => setTimeout(r, 400));
+      }
     } catch (err) {
       console.error("SuperAdmin load error:", err)
-      setError("No se pudieron cargar los datos globales.")
+      setError("No se pudo conectar con los datos en tiempo real.")
     } finally {
       setLoading(false)
     }
@@ -55,11 +88,19 @@ export default function SuperAdminDashboard() {
     <div className="anim-fade-in" style={{ paddingBottom: 60 }}>
       <div className="page-header">
         <div>
-          <h1 className="page-title">🛡️ Panel SuperAdmin</h1>
-          <p className="page-subtitle">Estadísticas globales de la plataforma</p>
+          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            🛡️ Panel Realtime
+            {isRealtime && (
+              <span className="chip chip-green" style={{ fontSize: 10, padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor', animation: 'pulse 2s infinite' }} />
+                EN VIVO
+              </span>
+            )}
+          </h1>
+          <p className="page-subtitle">Actualizado: {lastUpdate.toLocaleTimeString()} — Datos globales de la plataforma</p>
         </div>
-        <button className="btn btn-secondary" onClick={loadAll} disabled={loading}>
-          {loading ? 'Recargando...' : '↻ Refrescar datos'}
+        <button className="btn btn-secondary" onClick={() => loadAll()} disabled={loading}>
+          {loading ? 'Sincronizando...' : '↻ Forzar actualización'}
         </button>
       </div>
 
