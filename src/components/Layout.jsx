@@ -157,7 +157,7 @@ export default function Layout() {
         Cerrar sesión
       </button>
 
-      <div className="sidebar-footer">Family Day v1.0 · 2025</div>
+      <div className="sidebar-footer">Family Day v1.0 · 2026</div>
     </>
   )
 
