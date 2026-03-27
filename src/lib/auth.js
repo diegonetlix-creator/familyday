@@ -254,7 +254,7 @@ export const Invitations = {
 
     // 2. Crear el perfil del miembro invitado vinculando su nuevo UUID
     const member = await dbInsert('fd_members', {
-      id: userId,
+      id: authData.user.id,
       name: memberPayload.name,
       age: memberPayload.age || null,
       role: memberPayload.role,
