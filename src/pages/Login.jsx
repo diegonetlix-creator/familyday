@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Mail, Lock, Eye, EyeOff, Trophy, Gift, Users, AlertCircle } from 'lucide-react'
 import { Auth } from '../lib/auth.js'
+import { supabase } from '../lib/supabase.js'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -11,11 +12,32 @@ export default function Login() {
   const [showPass, setShowPass] = useState(false)
 
   useEffect(() => {
+    // Si ya hay sesión local guardada, redirigir de inmediato
     if (Auth.isLoggedIn()) {
       const u = Auth.getCurrentUser()
       const dest = u?.role === 'superadmin' ? '/superadmin' : u?.role === 'child' ? '/my-tasks' : '/dashboard'
       navigate(dest, { replace: true })
+      return
     }
+
+    // Escuchar cuando Supabase establece sesión (ej: Google OAuth callback)
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        // Esperar un momento a que App.jsx escriba fd_session
+        const check = setInterval(() => {
+          const u = Auth.getCurrentUser()
+          if (u) {
+            clearInterval(check)
+            const dest = u.role === 'superadmin' ? '/superadmin' : u.role === 'child' ? '/my-tasks' : '/dashboard'
+            navigate(dest, { replace: true })
+          }
+        }, 100)
+        // Timeout de seguridad: si en 5s no hay sesión, ir a complete-profile
+        setTimeout(() => clearInterval(check), 5000)
+      }
+    })
+
+    return () => listener.subscription.unsubscribe()
   }, [navigate])
 
   const handleSubmit = async e => {
