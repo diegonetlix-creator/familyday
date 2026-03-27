@@ -1,72 +1,28 @@
-const API_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://gfqpafvwlgmswthnmvkl.supabase.co') + '/rest/v1'
-const SERVICE_KEY = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || ''
-
-const getServiceHeaders = () => ({
-  'apikey': SERVICE_KEY,
-  'Authorization': `Bearer ${SERVICE_KEY}`,
-  'Content-Type': 'application/json',
-  'Prefer': 'return=representation'
-})
-
-// Bypasses RLS to fetch global counts
-async function fetchCount(table, filters = {}) {
-  let url = `${API_URL}/${table}?select=*&limit=1` // We use head to just get count
-  for (const [col, val] of Object.entries(filters)) {
-    url += `&${col}=eq.${val}`
-  }
-  
-  const res = await fetch(url, { 
-    headers: { ...getServiceHeaders(), 'Prefer': 'count=exact' },
-    method: 'HEAD'
-  })
-  
-  if (!res.ok) return 0
-  
-  const range = res.headers.get('content-range')
-  if (range && range.includes('/')) {
-    return parseInt(range.split('/')[1]) || 0
-  }
-  return 0
-}
-
-// Sum a specific column
-async function fetchSum(table, column) {
-  const url = `${API_URL}/${table}?select=${column}`
-  const res = await fetch(url, { headers: getServiceHeaders() })
-  if (!res.ok) return 0
-  const data = await res.json()
-  return data.reduce((acc, row) => acc + (row[column] || 0), 0)
-}
+// WARNING: The SuperAdmin key must NEVER be exposed in the frontend.
+// It has been removed and moved to a secure Supabase Edge Function.
+const API_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://gfqpafvwlgmswthnmvkl.supabase.co') + '/functions/v1'
 
 export const SuperAdmin = {
   getGlobalStats: async () => {
     try {
-      const [
-        totalUsers,
-        totalAdmins,
-        totalChildren,
-        totalTasks,
-        totalRewardsDelivered,
-        aiUsageCount
-      ] = await Promise.all([
-        fetchCount('fd_members'),
-        fetchCount('fd_members', { role: 'admin' }),
-        fetchCount('fd_members', { role: 'child' }),
-        fetchCount('fd_tasks'),
-        fetchCount('fd_redemptions', { status: 'approved' }),
-        fetchSum('fd_members', 'ai_usage_count')
-      ])
+      // We fetch the fresh session token from Supabase
+      const { data: { session } } = await (await import('./store.js')).supabase.auth.getSession()
+      
+      const res = await fetch(`${API_URL}/get-superadmin-stats`, {
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      })
 
-      return {
-        totalUsers,
-        totalAdmins,
-        totalChildren,
-        totalTasks,
-        totalRewardsDelivered,
-        aiUsageCount
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to fetch global stats')
       }
+
+      return await res.json()
     } catch (err) {
-      console.error("Error fetching global stats:", err)
+      console.error("Security Error / API Error:", err)
       return null
     }
   }
