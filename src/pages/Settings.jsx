@@ -18,11 +18,25 @@ export default function Settings() {
 
   const loadData = async () => {
     setLoading(true)
-    const current = Auth.getCurrentUser()
-    const allMembers = await FamilyMember.list()
-    setCurrentUser(allMembers.find(m => m.id === (current.userId || current.id)))
-    setMembers(allMembers)
-    setLoading(false)
+    try {
+      const current = Auth.getCurrentUser()
+      if (!current) { setLoading(false); return }
+      const allMembers = await FamilyMember.list()
+      // Buscar por id, userId o email (por si el UID cambió con Google OAuth)
+      let me = allMembers.find(m => m.id === (current.userId || current.id))
+      if (!me) me = allMembers.find(m => m.email === current.email)
+      if (!me) {
+        // Fallback: usar datos de sesión directamente
+        me = { id: current.id || current.userId, name: current.name, email: current.email, role: current.role, color: current.color, family_id: current.family_id }
+      }
+      setCurrentUser(me)
+      setMembers(allMembers)
+    } catch (err) {
+      console.error('Settings loadData error:', err)
+      showMsg('Error al cargar datos: ' + err.message, 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const showMsg = (text, type = 'success') => {
@@ -103,6 +117,7 @@ export default function Settings() {
   }
 
   if (loading) return <div className="loading-wrap"><div className="spinner" /></div>
+  if (!currentUser) return <div className="loading-wrap"><p style={{ color: 'var(--text-muted)' }}>No se pudo cargar el perfil.</p></div>
 
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin'
   const children = members.filter(m => m.role === 'child')

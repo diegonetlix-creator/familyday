@@ -119,6 +119,7 @@ export default function Members() {
   const [editing, setEditing] = useState(null)
   
   const [inviteModalData, setInviteModalData] = useState(null)
+  const [toast, setToast] = useState(null)
 
   useEffect(() => { loadData() }, [])
 
@@ -144,7 +145,15 @@ export default function Members() {
       setLoading(true)
       try {
         const result = await Invitations.create(data)
-        setInviteModalData({ invitation: result, member: result.member })
+        setShowModal(false)
+        if (result.isAlreadyLinked) {
+          // Ya existía y está activo → solo mostrar confirmación breve
+          setToast({ text: `✅ ${result.member.name} ya es miembro activo de la familia.`, type: 'success' })
+          setTimeout(() => setToast(null), 4000)
+          loadData()
+        } else {
+          setInviteModalData({ invitation: result, member: result.member })
+        }
       } catch (err) {
         alert('Error al enviar invitación: ' + err.message)
       } finally {
@@ -186,6 +195,14 @@ export default function Members() {
 
   return (
     <div className="anim-fade-in">
+      {toast && (
+        <div className="anim-slide-up" style={{
+          position: 'fixed', top: 20, right: 20, zIndex: 1000,
+          padding: '12px 20px', borderRadius: 8, color: 'white',
+          background: toast.type === 'error' ? 'var(--red-500)' : 'var(--green-500)',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)', fontSize: 14, fontWeight: 600
+        }}>{toast.text}</div>
+      )}
       <div className="page-header">
         <div>
           <h1 className="page-title">👥 Familia</h1>

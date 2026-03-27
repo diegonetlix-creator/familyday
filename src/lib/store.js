@@ -1,4 +1,4 @@
-import { supabase } from './supabase.js'
+
 
 // === CONSTANTS ===
 export const MEMBER_COLORS = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#a855f7', '#ec4899']
@@ -40,7 +40,7 @@ export const REWARD_CATEGORY_BG = {
 const API_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://gfqpafvwlgmswthnmvkl.supabase.co') + '/rest/v1'
 const API_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdmcXBhZnZ3bGdtc3d0aG5tdmtsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTE0MTIsImV4cCI6MjA4OTUyNzQxMn0.1J9MB0K4dLld2yHOcct6m8VhF40VLO4lya179ChsoAE'
 
-const getHeaders = async () => {
+const getHeaders = () => {
   const sessionData = localStorage.getItem('fd_session')
   const h = {
     'apikey': API_KEY,
@@ -48,25 +48,11 @@ const getHeaders = async () => {
     'Content-Type': 'application/json',
     'Prefer': 'return=representation'
   }
-  
-  try {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (session?.access_token) {
-      h['Authorization'] = `Bearer ${session.access_token}`
-      // Update local storage if needed
-      if (sessionData) {
-        const parsed = JSON.parse(sessionData)
-        if (parsed.accessToken !== session.access_token) {
-          parsed.accessToken = session.access_token
-          localStorage.setItem('fd_session', JSON.stringify(parsed))
-        }
-      }
-    } else if (sessionData) {
-       const parsed = JSON.parse(sessionData)
-       if (parsed.accessToken) h['Authorization'] = `Bearer ${parsed.accessToken}`
-    }
-  } catch (e) {
-    console.error("Session refresh error:", e)
+  if (sessionData) {
+    try {
+      const { accessToken } = JSON.parse(sessionData)
+      if (accessToken) h['Authorization'] = `Bearer ${accessToken}`
+    } catch (e) {}
   }
   return h
 }
@@ -95,7 +81,7 @@ async function dbSelect(table, { order, limit, filters, isGlobal = false } = {})
   }
   if (limit) url += `&limit=${limit}`
 
-  const headers = await getHeaders()
+  const headers = getHeaders()
   const res = await fetch(url, { headers })
   if (!res.ok) {
     console.error(`dbSelect ${table} error:`, res.status, await res.text())
@@ -114,7 +100,7 @@ async function dbInsert(table, row) {
   }
 
   const data = familyId ? { ...row, family_id: familyId } : row
-  const headers = await getHeaders()
+  const headers = getHeaders()
 
   const res = await fetch(`${API_URL}/${table}`, {
     method: 'POST',
@@ -132,7 +118,7 @@ async function dbInsert(table, row) {
 
 // UPDATE a row by id
 async function dbUpdate(table, id, data) {
-  const headers = await getHeaders()
+  const headers = getHeaders()
   const res = await fetch(`${API_URL}/${table}?id=eq.${id}`, {
     method: 'PATCH',
     headers,
@@ -149,7 +135,7 @@ async function dbUpdate(table, id, data) {
 
 // DELETE a row by id
 async function dbDelete(table, id) {
-  const headers = await getHeaders()
+  const headers = getHeaders()
   const res = await fetch(`${API_URL}/${table}?id=eq.${id}`, {
     method: 'DELETE',
     headers
@@ -166,7 +152,7 @@ async function dbCount(table, filters = {}) {
   for (const [col, val] of Object.entries(filters)) {
     url += `&${col}=eq.${val}`
   }
-  const headers = await getHeaders()
+  const headers = getHeaders()
   const res = await fetch(url, {
     headers: { ...headers, 'Prefer': 'count=exact', 'Range-Unit': 'items', 'Range': '0-0' }
   })

@@ -258,6 +258,22 @@ export const Invitations = {
       .limit(1);
     const existingProfile = profileRows?.[0] || null;
 
+    // PASO 2b: Si ya tiene perfil activo en ESTA misma familia → vincular directamente sin correo
+    if (existingProfile && existingProfile.status === 'active' && existingProfile.family_id === familyId) {
+      // Solo actualizar nombre/color si cambiaron
+      const { data: updated } = await supabaseAdmin
+        .from('fd_members')
+        .update({
+          name: memberPayload.name || existingProfile.name,
+          color: memberPayload.color || existingProfile.color,
+          age: memberPayload.age || existingProfile.age
+        })
+        .eq('id', existingProfile.id)
+        .select()
+        .single();
+      return { token: 'direct', isRealInvite: false, isAlreadyLinked: true, member: updated || existingProfile }
+    }
+
     let authId = existingAuthUser?.id || null;
 
     // PASO 3: Si NO está registrado → enviar invitación por correo
@@ -310,7 +326,7 @@ export const Invitations = {
 
     if (!member) throw new Error("Error guardando el perfil del miembro.");
 
-    return { token: 'supabase', isRealInvite: !isAlreadyRegistered, member }
+    return { token: 'supabase', isRealInvite: !isAlreadyRegistered, isAlreadyLinked: false, member }
   },
 
   async resend(email) {
