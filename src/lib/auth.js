@@ -241,36 +241,64 @@ export const Invitations = {
       throw new Error("Se requiere Service Role Key (VITE_SUPABASE_SERVICE_ROLE_KEY) para enviar invitaciones automáticas por correo desde Supabase.")
     }
 
-    // 1. Enviar invitacion nativa de Supabase Auth (Envia correo)
+    let authId = null;
+    let isAlreadyRegistered = false;
+
+    // 1. Intentar invitar o detectar si ya existe
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(memberPayload.email)
     
     if (authError) {
-      console.error('Error enviando invitación desde Auth:', authError)
-      throw authError
+      if (authError.message.toLowerCase().includes('already') || authError.message.toLowerCase().includes('registrado')) {
+        isAlreadyRegistered = true;
+        // Si ya existe, listamos usuarios para encontrar su ID
+        const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
+        const existingUser = listData?.users?.find(u => u.email.toLowerCase() === memberPayload.email.toLowerCase());
+        if (!existingUser) throw new Error("El usuario ya está registrado en Auth pero no pudimos validar su ID. Verifica el correo.");
+        authId = existingUser.id;
+      } else {
+        console.error('Error enviando invitación:', authError)
+        throw authError;
+      }
+    } else {
+      authId = authData.user.id;
     }
 
     const user = Auth.getCurrentUser();
     const familyId = user?.family_id;
 
-    // 2. Crear el perfil del miembro invitado vinculando su nuevo UUID
-    const member = await dbInsert('fd_members', {
-      id: authData.user.id,
-      name: memberPayload.name,
-      age: memberPayload.age || null,
-      role: memberPayload.role,
-      color: memberPayload.color,
-      email: memberPayload.email,
-      status: 'invited',
-      total_points: 0,
-      redeemed_points: 0,
-      family_id: familyId
-    })
+    // 2. Vincular o crear el perfil en la familia (fd_members)
+    let existingProfile = await dbGetOne('fd_members', { email: memberPayload.email.trim().toLowerCase() });
+    let member;
 
-    if (!member) {
-      throw new Error("Error guardando miembro tras invitación")
+    if (existingProfile) {
+      // Lo movemos a esta familia y lo activamos
+      member = await dbUpdate('fd_members', existingProfile.id, {
+        id: authId,
+        family_id: familyId,
+        status: 'active',
+        name: memberPayload.name || existingProfile.name,
+        role: memberPayload.role || existingProfile.role,
+        color: memberPayload.color || existingProfile.color
+      });
+    } else {
+      // Creamos perfil nuevo vinculado a esta familia
+      member = await dbInsert('fd_members', {
+        id: authId,
+        name: memberPayload.name,
+        age: memberPayload.age || null,
+        role: memberPayload.role,
+        color: memberPayload.color,
+        email: memberPayload.email,
+        status: isAlreadyRegistered ? 'active' : 'invited',
+        total_points: 0,
+        redeemed_points: 0,
+        family_id: familyId
+      });
     }
 
-    return { token: 'supabase-real', isRealInvite: true, member }
+    if (!member) throw new Error("Error guardando el perfil del miembro.");
+
+    return { token: 'supabase', isRealInvite: !isAlreadyRegistered, member }
   },
 
   async resend(email) {
