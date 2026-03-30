@@ -404,6 +404,60 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      
+      <div style={{ marginTop: 32, paddingBottom: 24 }}>
+        <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+          💎 Mi Plan
+        </h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+          
+          {/* Free Plan */}
+          <div className="card" style={{ 
+            padding: 24, 
+            border: !isPremium ? '2px solid var(--purple-500)' : '1px solid var(--border)',
+            position: 'relative' 
+          }}>
+            {!isPremium && <div style={{ position: 'absolute', top: -12, right: 24, background: 'var(--purple-500)', color: 'white', padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 800 }}>Plan Actual</div>}
+            <h4 style={{ fontSize: 20, fontWeight: 900, color: 'var(--gray-800)', marginBottom: 8 }}>Plan Gratuito</h4>
+            <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--purple-600)', marginBottom: 16 }}>$0 <span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600 }}>/ mes</span></div>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 12, fontSize: 14, color: 'var(--text-secondary)' }}>
+              <li>✔️ 1 Administrador (Padre/Madre)</li>
+              <li>✔️ 1 Hijo (Participante)</li>
+              <li>✔️ Límite de 5 tareas activas por mes</li>
+              <li style={{ color: 'var(--text-muted)', textDecoration: 'line-through' }}>❌ Teacher IA (Bloqueado)</li>
+              <li style={{ color: 'var(--text-muted)', textDecoration: 'line-through' }}>❌ Ajustes y Foto de Perfil</li>
+            </ul>
+          </div>
+
+          {/* Premium Plan */}
+          <div className="card" style={{ 
+            padding: 24, 
+            background: 'linear-gradient(to bottom right, var(--purple-50), #fff)',
+            border: isPremium ? '2px solid var(--green-500)' : '1px solid var(--purple-200)',
+            position: 'relative' 
+          }}>
+            {isPremium && <div style={{ position: 'absolute', top: -12, right: 24, background: 'var(--green-500)', color: 'white', padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 800 }}>Plan Actual</div>}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <h4 style={{ fontSize: 20, fontWeight: 900, color: 'var(--purple-800)', margin: 0 }}>Plan Premium</h4>
+              <span style={{ fontSize: 20 }}>👑</span>
+            </div>
+            <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--purple-600)', marginBottom: 16 }}>$3.99 <span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600 }}>/ mes</span></div>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 12, fontSize: 14, color: 'var(--purple-800)', fontWeight: 500 }}>
+              <li>✔️ <strong>Padres/Madres sin límites</strong></li>
+              <li>✔️ <strong>Hijos sin límites</strong></li>
+              <li>✔️ <strong>Tareas ilimitadas</strong></li>
+              <li>✔️ <strong>Teacher IA:</strong> Asistente virtual escolar</li>
+              <li>✔️ <strong>Ajustes y fotos de perfil reales</strong></li>
+            </ul>
+            {!isPremium && (
+              <button className="btn btn-primary" style={{ width: '100%', marginTop: 24, justifyContent: 'center', background: 'linear-gradient(135deg, var(--green-500), var(--emerald-500))', border: 'none', boxShadow: 'var(--shadow-sm)' }}>
+                Adquirir Premium
+              </button>
+            )}
+          </div>
+
+        </div>
+      </div>
     </div>
   )
 }
