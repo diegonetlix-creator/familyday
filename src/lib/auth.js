@@ -271,6 +271,24 @@ export const Auth = {
   },
 
   /**
+   * Get all invites originally sent by this family that are still pending.
+   */
+  async getSentInvites() {
+    try {
+      const current = this.getCurrentUser()
+      if (!current?.family_id) return []
+
+      const res = await fetch(`${API_URL}/fd_notifications?from_family_id=eq.${current.family_id}&type=eq.family_invite&status=in.(unread,pending)`, {
+        headers: userHeaders(current.token)
+      })
+      if (!res.ok) return []
+      return await res.json()
+    } catch {
+      return []
+    }
+  },
+
+  /**
    * Get all pending family invites for the current user.
    */
   async getPendingInvites() {
@@ -280,7 +298,7 @@ export const Auth = {
 
       const res = await fetch(`${RPC_URL}/get_my_pending_invites`, {
         method: 'POST',
-        headers: serviceHeaders(),
+        headers: userHeaders(current.token),
         body: JSON.stringify({})
       })
       if (!res.ok) return []
@@ -298,9 +316,12 @@ export const Auth = {
    */
   async respondToInvite(notificationId, accept) {
     try {
+      const current = this.getCurrentUser()
+      if (!current?.id) return { ok: false, error: 'User missing' }
+      
       const res = await fetch(`${RPC_URL}/respond_to_family_invite`, {
         method: 'POST',
-        headers: serviceHeaders(),
+        headers: userHeaders(current.token),
         body: JSON.stringify({
           p_notification_id: notificationId,
           p_accept:          accept

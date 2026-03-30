@@ -276,6 +276,7 @@ function EditMemberModal({ member, onSave, onClose }) {
 export default function Members() {
   const [members, setMembers] = useState([])
   const [completions, setCompletions] = useState([])
+  const [sentInvites, setSentInvites] = useState([])
   const [loading, setLoading] = useState(true)
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -301,13 +302,14 @@ export default function Members() {
          console.warn("Session refreshed but still no family_id. This admin might not be assigned to a family.")
       }
       
-      // 2. Load members
-      const [m] = await Promise.all([FamilyMember.list()])
+      // 2. Load members & sent invites
+      const [m, invites] = await Promise.all([FamilyMember.list(), Auth.getSentInvites()])
       
       // 3. Debug logging if needed
       console.log(`Members loaded: ${m.length}`, m)
       
       setMembers(m)
+      setSentInvites(invites || [])
       
       // 4. Load recent completions
       TaskCompletion.list('-createdAt', 50).then(c => setCompletions(c)).catch(() => {})
@@ -323,6 +325,7 @@ export default function Members() {
     setShowLinkModal(false)
     if (isPending) {
       showToast(`📨 ${pendingMsg || 'Invitación enviada. El miembro debe aceptarla.'}`, 'info')
+      setTimeout(loadData, 500)
     } else {
       showToast(`✅ ${member?.name} se vinculó exitosamente a tu familia`)
       setTimeout(loadData, 500)
@@ -388,6 +391,28 @@ export default function Members() {
         <div className="loading-wrap"><div className="spinner" /></div>
       ) : (
         <>
+          {sentInvites.length > 0 && (
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--blue-600)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 12 }}>
+                📨 Invitaciones Enviadas (Pendientes)
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr)', gap: 10 }}>
+                {sentInvites.map(inv => (
+                  <div key={inv.id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '14px 18px', background: 'var(--blue-50)', border: '1px solid var(--blue-200)', borderRadius: 12
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: 700, color: 'var(--blue-900)', fontSize: 14 }}>{inv.member_email}</div>
+                      <div style={{ fontSize: 12, color: 'var(--blue-700)', marginTop: 2 }}>Esperando respuesta...</div>
+                    </div>
+                    <Clock size={16} color="var(--blue-500)" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {admins.length > 0 && (
             <div style={{ marginBottom: 28 }}>
               <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 12 }}>
