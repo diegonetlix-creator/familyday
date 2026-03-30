@@ -279,9 +279,11 @@ export default function Members() {
   const [members, setMembers] = useState([])
   const [completions, setCompletions] = useState([])
   const [sentInvites, setSentInvites] = useState([])
+  const [pendingInvites, setPendingInvites] = useState([])
   const [loading, setLoading] = useState(true)
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [responding, setResponding] = useState(null)
   const [toast, setToast] = useState(null)
 
   const currentUser = Auth.getCurrentUser()
@@ -304,14 +306,15 @@ export default function Members() {
          console.warn("Session refreshed but still no family_id. This admin might not be assigned to a family.")
       }
       
-      // 2. Load members & sent invites
-      const [m, invites] = await Promise.all([FamilyMember.list(), Auth.getSentInvites()])
+      // 2. Load members & sent invites & pending invites for user
+      const [m, invites, pending] = await Promise.all([FamilyMember.list(), Auth.getSentInvites(), Auth.getPendingInvites()])
       
       // 3. Debug logging if needed
       console.log(`Members loaded: ${m.length}`, m)
       
       setMembers(m)
       setSentInvites(invites || [])
+      setPendingInvites(pending || [])
       
       // 4. Load recent completions
       TaskCompletion.list('-createdAt', 50).then(c => setCompletions(c)).catch(() => {})
@@ -332,6 +335,24 @@ export default function Members() {
       showToast(`✅ ${member?.name || 'El miembro'} se vinculó exitosamente a tu familia`)
       setTimeout(loadData, 500)
     }
+  }
+
+  const handleRespond = async (id, accept) => {
+    setResponding(id)
+    const result = await Auth.respondToInvite(id, accept)
+    if (result.ok) {
+      if (accept) {
+        showToast('✅ Invitación aceptada. Sincronizando...')
+        await Auth.refreshSession()
+        window.location.reload()
+      } else {
+        showToast('❌ Invitación rechazada.')
+        setPendingInvites(prev => prev.filter(i => i.id !== id))
+      }
+    } else {
+      showToast('Error: ' + result.error, 'error')
+    }
+    setResponding(null)
   }
 
   const handleEditSave = async data => {
@@ -393,6 +414,44 @@ export default function Members() {
         <div className="loading-wrap"><div className="spinner" /></div>
       ) : (
         <>
+          {/* Pending Invitations Received */}
+          {pendingInvites.length > 0 && (
+            <div style={{ marginBottom: 28, padding: 18, background: 'var(--amber-50)', border: '2px solid var(--amber-200)', borderRadius: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                <span style={{ fontSize: 24 }}>📬</span>
+                <div>
+                  <div style={{ fontWeight: 800, color: 'var(--amber-900)', fontSize: 16 }}>Tienes invitaciones pendientes</div>
+                  <div style={{ fontSize: 13, color: 'var(--amber-700)' }}>Alguien te ha invitado a unirte a su familia. Al aceptar, verás a sus miembros.</div>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr)', gap: 10 }}>
+                {pendingInvites.map(inv => (
+                  <div key={inv.id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap',
+                    padding: '14px 18px', background: '#fff', border: '1px solid var(--amber-300)', borderRadius: 12
+                  }}>
+                    <div style={{ marginBottom: '8px' }}>
+                      <div style={{ fontWeight: 800, color: 'var(--gray-900)', fontSize: 14 }}>
+                        {inv.payload?.requester_name || inv.requester_name || 'Alguien'} te invita
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        {inv.payload?.requester_email || inv.requester_email || 'Oculto'}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="btn btn-primary btn-sm" disabled={responding === inv.id} onClick={() => handleRespond(inv.id, true)}>
+                        {responding === inv.id ? '⏳...' : '✅ Aceptar'}
+                      </button>
+                      <button className="btn btn-secondary btn-sm" disabled={responding === inv.id} onClick={() => handleRespond(inv.id, false)}>
+                        Rechazar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {sentInvites.length > 0 && (
             <div style={{ marginBottom: 28 }}>
               <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--blue-600)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 12 }}>
