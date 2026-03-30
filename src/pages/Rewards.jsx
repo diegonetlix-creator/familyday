@@ -346,24 +346,39 @@ export default function Rewards() {
             if (isApproved) {
               return (
                 <div key={red.id} style={{
-                  background: 'linear-gradient(135deg, var(--purple-600), var(--blue-600))',
-                  color: 'white', padding: 20, borderRadius: 16, display: 'flex',
+                  background: 'linear-gradient(135deg, #6d28d9, #4f46e5)',
+                  color: '#ffffff', padding: '24px 28px', borderRadius: 20, display: 'flex',
                   justifyContent: 'space-between', alignItems: 'center', position: 'relative',
-                  overflow: 'hidden', boxShadow: '0 8px 24px rgba(139, 92, 246, 0.3)',
-                  border: '2px dashed rgba(255,255,255,0.3)'
+                  overflow: 'hidden', boxShadow: '0 10px 25px rgba(109, 40, 217, 0.4)',
+                  border: '2px dashed rgba(255,255,255,0.4)',
+                  margin: '8px 0'
                 }}>
                   {/* Perforations */}
-                  <div style={{ position: 'absolute', left: -10, top: '50%', transform: 'translateY(-50%)', width: 20, height: 20, background: 'var(--bg-default)', borderRadius: '50%' }} />
-                  <div style={{ position: 'absolute', right: -10, top: '50%', transform: 'translateY(-50%)', width: 20, height: 20, background: 'var(--bg-default)', borderRadius: '50%' }} />
+                  <div style={{ position: 'absolute', left: -12, top: '50%', transform: 'translateY(-50%)', width: 24, height: 24, background: 'var(--bg-page, #f5f3ff)', borderRadius: '50%', zIndex: 2 }} />
+                  <div style={{ position: 'absolute', right: -12, top: '50%', transform: 'translateY(-50%)', width: 24, height: 24, background: 'var(--bg-page, #f5f3ff)', borderRadius: '50%', zIndex: 2 }} />
                   
-                  <div style={{ zIndex: 1, paddingLeft: 10 }}>
-                    <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, opacity: 0.8, marginBottom: 4, fontWeight: 700 }}>🎟️ Ticket de Regalo Validado</div>
-                    <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 2 }}>{red.reward_title}</div>
-                    <div style={{ fontSize: 13, opacity: 0.9 }}>Para: <strong>{m?.name}</strong></div>
+                  <div style={{ zIndex: 1, flex: 1 }}>
+                    <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 1.5, opacity: 0.9, marginBottom: 8, fontWeight: 800, color: '#e0e7ff' }}>
+                      🎟️ TICKET DE REGALO VALIDADO
+                    </div>
+                    <div style={{ fontSize: 26, fontWeight: 900, marginBottom: 4, textShadow: '0 2px 4px rgba(0,0,0,0.2)', lineHeight: 1.2 }}>
+                      {red.reward_title}
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 700, opacity: 0.95, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ color: '#c7d2fe' }}>Para:</span> 
+                      <span style={{ background: 'rgba(255,255,255,0.15)', padding: '2px 8px', borderRadius: 6 }}>{m?.name || 'Miembro'}</span>
+                    </div>
                   </div>
-                  <div style={{ textAlign: 'right', zIndex: 1, paddingRight: 10 }}>
-                    <div style={{ fontSize: 32, marginBottom: 6 }}>🎁</div>
-                    <div style={{ fontSize: 11, fontWeight: 800, background: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: 8, textTransform: 'uppercase', letterSpacing: 1 }}>APROBADO</div>
+
+                  <div style={{ textAlign: 'center', zIndex: 1, marginLeft: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                    <div style={{ fontSize: 48, filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))' }}>🎁</div>
+                    <div style={{ 
+                      fontSize: 12, fontWeight: 900, background: '#ffffff', color: '#4f46e5', 
+                      padding: '6px 14px', borderRadius: 10, textTransform: 'uppercase', 
+                      letterSpacing: 1.5, boxShadow: '0 4px 10px rgba(0,0,0,0.1)' 
+                    }}>
+                      APROBADO
+                    </div>
                   </div>
                 </div>
               )
