@@ -194,7 +194,11 @@ function LinkMemberModal({ onClose, onSuccess, currentFamilyId, existingMemberEm
               onClick={handleLink}
               disabled={linking}
             >
-              {linking ? <><div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Vinculando...</> : '🔗 Vincular a mi familia'}
+              {linking ? (
+                <><div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> {role === 'child' ? 'Agregando...' : 'Enviando...'}</>
+              ) : (
+                role === 'child' ? '➕ Agregar hijo/a a mi familia' : '📨 Enviar invitación a este padre'
+              )}
             </button>
           )}
         </div>
