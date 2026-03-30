@@ -441,7 +441,7 @@ export default function Dashboard() {
               <h4 style={{ fontSize: 20, fontWeight: 900, color: 'var(--purple-800)', margin: 0 }}>Plan Premium</h4>
               <span style={{ fontSize: 20 }}>👑</span>
             </div>
-            <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--purple-600)', marginBottom: 16 }}>$3.99 <span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600 }}>/ mes</span></div>
+            <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--purple-600)', marginBottom: 16 }}>$4.99 <span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600 }}>/ mes</span></div>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 12, fontSize: 14, color: 'var(--purple-800)', fontWeight: 500 }}>
               <li>✔️ <strong>Padres/Madres sin límites</strong></li>
               <li>✔️ <strong>Hijos sin límites</strong></li>
