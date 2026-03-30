@@ -108,8 +108,8 @@ export default function NotificationBell() {
                         </span>
                       </div>
                       <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
-                        <strong>{invite.requester_name || 'Alguien'}</strong>{' '}
-                        ({invite.requester_email}) te ha invitado a unirte a su familia.
+                        <strong>{invite.payload?.requester_name || invite.requester_name || 'Alguien'}</strong>{' '}
+                        ({invite.payload?.requester_email || invite.requester_email || 'Oculto'}) te ha invitado a unirte a su familia.
                       </p>
                       <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
                         {new Date(invite.created_at).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' })}
