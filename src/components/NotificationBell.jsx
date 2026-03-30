@@ -25,7 +25,8 @@ export default function NotificationBell() {
     const result = await Auth.respondToInvite(id, accept)
     if (result.ok) {
       if (accept) {
-        // Reload the page so sidebar/session reflects new family
+        // Re-sync session locally and reload
+        await Auth.refreshSession()
         window.location.reload()
       } else {
         setInvites(prev => prev.filter(i => i.id !== id))

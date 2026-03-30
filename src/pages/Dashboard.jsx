@@ -97,11 +97,13 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+        </div>
           <div style={{ position: 'absolute', right: -20, bottom: -20, fontSize: 120, opacity: 0.15, transform: 'rotate(-15deg)' }}>🚀</div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
+        <div className="responsive-grid">
           {/* Points & Stats */}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div className="card" style={{ padding: 24, textAlign: 'center', background: 'var(--bg-card)' }}>
               <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>Puntos para canjear</div>
@@ -241,9 +243,9 @@ export default function Dashboard() {
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24 }}>
-
+      <div className="responsive-dashboard-main">
         {/* Left column */}
+
         <div>
           {/* Recent activity */}
           <div className="card mb-4">
