@@ -255,6 +255,13 @@ export const Auth = {
           p_requester_id: current.id
         })
       })
+      
+      if (!res.ok) {
+        let errStr = await res.text()
+        try { errStr = JSON.parse(errStr).message || errStr } catch {}
+        return { ok: false, error: errStr }
+      }
+
       const result = await res.json()
 
       // If linked directly and newRole was specified, update the role too

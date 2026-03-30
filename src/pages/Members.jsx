@@ -63,7 +63,9 @@ function LinkMemberModal({ onClose, onSuccess, currentFamilyId, existingMemberEm
         // Invite sent — member already has a family and must accept
         onSuccess(null, true, result.message)
       } else if (!result.ok) {
-        setError(result.error)
+        setError(result.error || 'Error desconocido al invitar.')
+      } else {
+        setError(result.error || result.message || 'Error inesperado del servidor.')
       }
     } catch (err) {
       setError('Error al vincular: ' + err.message)
