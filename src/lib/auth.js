@@ -252,7 +252,8 @@ export const Auth = {
         body: JSON.stringify({
           p_member_email: memberEmail.trim().toLowerCase(),
           p_family_id:    familyId,
-          p_requester_id: current.id
+          p_requester_id: current.id,
+          p_role:         newRole || null
         })
       })
       
