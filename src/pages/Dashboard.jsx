@@ -97,7 +97,6 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-        </div>
           <div style={{ position: 'absolute', right: -20, bottom: -20, fontSize: 120, opacity: 0.15, transform: 'rotate(-15deg)' }}>🚀</div>
         </div>
 

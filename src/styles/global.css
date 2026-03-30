@@ -821,15 +821,10 @@ textarea.form-input { resize: vertical; min-height: 80px; }
   .stat-grid { grid-template-columns: 1fr; gap: 12px; }
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   .page-header { flex-direction: column; align-items: stretch; }
-  .page-title { fontSize: 24px; }
+  .page-title { font-size: 24px; }
   .modal { max-height: 100vh; border-radius: 0; }
   .page-body { padding: 70px 12px 20px; }
   .responsive-grid { grid-template-columns: 1fr; }
-}
-
-  .grid-3 { grid-template-columns: 1fr; }
-  .grid-2 { grid-template-columns: 1fr; }
-  .page-title { font-size: 22px; }
 }
 
 /* Star Rating */
