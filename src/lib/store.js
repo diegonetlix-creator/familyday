@@ -224,7 +224,8 @@ export const Reward = {
 
 export const RewardRedemption = {
   list:   (sort, limit, global = false)  => dbSelect('fd_redemptions', { order: sort, limit, isGlobal: global }),
-  create: (data)         => dbInsert('fd_redemptions', data)
+  create: (data)         => dbInsert('fd_redemptions', data),
+  update: (id, data)     => dbUpdate('fd_redemptions', id, data)
 }
 
 export function getLevelInfo(points = 0) {
