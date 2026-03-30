@@ -64,8 +64,7 @@ export default function Register() {
 
     if (result.ok) {
       setSuccess(true)
-      const dest = result.user?.role === 'child' ? '/my-tasks' : '/dashboard'
-      setTimeout(() => navigate(dest, { replace: true }), 1500)
+      setLoading(false)
     } else {
       setErrors({ email: result.error })
       setLoading(false)
@@ -83,16 +82,54 @@ export default function Register() {
 
   if (success) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg-page)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="anim-pop" style={{ textAlign: 'center', padding: 20 }}>
-          <div style={{ fontSize: 64, marginBottom: 16 }}>🎉</div>
-          <h2 style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)', fontSize: 24 }}>
-            ¡Bienvenido/a a Family Day!
+      <div style={{ minHeight: '100vh', background: 'var(--bg-page)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div className="anim-pop" style={{ textAlign: 'center', maxWidth: 420, width: '100%' }}>
+
+          {/* Icon */}
+          <div style={{
+            width: 80, height: 80, borderRadius: '50%',
+            background: 'linear-gradient(135deg, var(--purple-400), var(--pink-500))',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 40, margin: '0 auto 24px', boxShadow: 'var(--shadow-purple)'
+          }}>✉️</div>
+
+          <h2 style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)', fontSize: 26, marginBottom: 12 }}>
+            ¡Verifica tu email!
           </h2>
-          <p style={{ color: 'var(--text-secondary)', marginTop: 8 }}>
-            Preparando tu espacio...
+
+          <p style={{ color: 'var(--text-secondary)', fontSize: 15, lineHeight: 1.7, marginBottom: 8 }}>
+            Te enviamos un correo de confirmación a:
           </p>
-          <div className="spinner" style={{ margin: '20px auto 0', width: 28, height: 28, borderWidth: 3 }} />
+
+          <div style={{
+            background: 'var(--purple-50)', border: '1.5px solid var(--purple-200)',
+            borderRadius: 10, padding: '10px 20px', display: 'inline-block',
+            fontWeight: 800, color: 'var(--purple-700)', fontSize: 15, marginBottom: 24
+          }}>
+            {form.email}
+          </div>
+
+          <div style={{
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+            borderRadius: 12, padding: '20px 24px', marginBottom: 24, textAlign: 'left'
+          }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.7, margin: 0 }}>
+              📬 <strong>Revisa tu bandeja de entrada</strong> (y la carpeta de <strong>spam</strong> por si acaso).
+              Haz clic en el enlace del correo para activar tu cuenta y luego inicia sesión normalmente.
+            </p>
+          </div>
+
+          <Link
+            to="/login"
+            className="btn btn-primary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none', padding: '12px 28px' }}
+          >
+            Ir a iniciar sesión
+          </Link>
+
+          <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 16 }}>
+            ¿No recibiste el correo? Espera unos minutos o revisa spam.
+          </p>
         </div>
       </div>
     )
