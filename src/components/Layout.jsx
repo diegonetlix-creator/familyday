@@ -3,7 +3,6 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, ClipboardList, Users, CheckSquare, Star, Gift, Trophy, Menu, X, Home, LogOut, Bot, Settings } from 'lucide-react'
 import { FamilyMember, TaskCompletion, getLevelInfo } from '../lib/store.js'
 import { Auth } from '../lib/auth.js'
-import NotificationBell from './NotificationBell.jsx'
 
 function XpRing({ progress, size = 44, color = '#7c3aed' }) {
   const r = (size - 6) / 2
@@ -65,6 +64,8 @@ export default function Layout() {
 
   const currentRole = member?.role || currentUser?.role
   
+  const isPremium = member?.plan === 'premium' || currentRole === 'superadmin'
+
   const navItems = currentRole === 'superadmin' ? [
     { to: '/superadmin',  icon: Trophy,           label: 'Panel SuperAdmin' },
     { to: '/settings',    icon: Settings,         label: 'Ajustes' },
@@ -75,9 +76,11 @@ export default function Layout() {
     { to: '/members',     icon: Users,            label: 'Familia' },
     { to: '/review',      icon: Star,             label: 'Revisar', badge: pendingCount },
     { to: '/rewards',     icon: Gift,             label: 'Premios' },
-    { to: '/teacher',     icon: Bot,              label: 'Teacher IA' },
     { to: '/leaderboard', icon: Trophy,           label: 'Ranking' },
-    { to: '/settings',    icon: Settings,         label: 'Ajustes' },
+    ...(isPremium ? [
+      { to: '/teacher',     icon: Bot,              label: 'Teacher IA' },
+      { to: '/settings',    icon: Settings,         label: 'Ajustes' }
+    ] : [])
   ]
 
   const SidebarContent = () => (
@@ -165,8 +168,7 @@ export default function Layout() {
         Cerrar sesión
       </button>
 
-      <div style={{ padding: '8px 12px', borderTop: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <NotificationBell />
+      <div style={{ padding: '8px 12px', borderTop: '1px solid rgba(255,255,255,.06)' }}>
         <div className="sidebar-footer" style={{ border: 'none', padding: 0, margin: 0 }}>Family Day v1.0</div>
       </div>
     </>
@@ -189,7 +191,6 @@ export default function Layout() {
           <span className="logo-name" style={{ fontSize: 16 }}>Family Day</span>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <NotificationBell />
           <button className="mobile-menu-btn" onClick={() => setOpen(!open)}>
             {open ? <X size={18} /> : <Menu size={18} />}
           </button>

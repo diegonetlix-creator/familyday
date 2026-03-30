@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Search, Edit2, Trash2, Zap, Star, ToggleLeft, ToggleRight } from 'lucide-react'
 import { Task, FamilyMember, CATEGORY_EMOJI, CATEGORY_LABEL, DIFFICULTY_LABEL, FREQUENCY_LABEL } from '../lib/store.js'
+import { Auth } from '../lib/auth.js'
 import TaskFormModal from '../components/TaskFormModal.jsx'
 
 export default function Tasks() {
@@ -11,6 +12,9 @@ export default function Tasks() {
   const [filterCat, setFilterCat] = useState('all')
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing]   = useState(null)
+  const [toast, setToast]       = useState(null)
+
+  const currentUser = Auth.getCurrentUser()
 
   useEffect(() => { loadData() }, [])
 
@@ -90,12 +94,28 @@ export default function Tasks() {
 
   return (
     <div className="anim-fade-in">
+      {toast && (
+        <div className="anim-slide-up" style={{
+          position: 'fixed', top: 20, right: 20, zIndex: 1000,
+          padding: '12px 20px', borderRadius: 8, color: 'white',
+          background: 'var(--amber-500)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', fontSize: 14, fontWeight: 600
+        }}>{toast}</div>
+      )}
+
       <div className="page-header">
         <div>
           <h1 className="page-title">📋 Tareas del Hogar</h1>
           <p className="page-subtitle">Gestiona todas las tareas y sus puntos</p>
         </div>
-        <button className="btn btn-primary" onClick={() => { setEditing(null); setShowModal(true) }}>
+        <button className="btn btn-primary" onClick={() => {
+          const isPremium = currentUser?.plan === 'premium' || currentUser?.role === 'superadmin'
+          if (!isPremium && tasks.length >= 5) {
+            setToast('🏆 Plan Gratuito: Límite de 5 tareas alcanzado. Actualiza a Premium para crear tareas ilimitadas.')
+            setTimeout(() => setToast(null), 4000)
+            return
+          }
+          setEditing(null); setShowModal(true) 
+        }}>
           <Plus size={16} /> Nueva Tarea
         </button>
       </div>
@@ -135,7 +155,15 @@ export default function Tasks() {
           <span className="empty-icon">📋</span>
           <span className="empty-title">No hay tareas</span>
           <span className="empty-desc">Crea la primera tarea para tu familia</span>
-          <button className="btn btn-primary btn-sm" style={{ marginTop: 12 }} onClick={() => { setEditing(null); setShowModal(true) }}>
+          <button className="btn btn-primary btn-sm" style={{ marginTop: 12 }} onClick={() => {
+            const isPremium = currentUser?.plan === 'premium' || currentUser?.role === 'superadmin'
+            if (!isPremium && tasks.length >= 5) {
+              setToast('🏆 Límite de 5 tareas alcanzado. Actualiza a Premium.')
+              setTimeout(() => setToast(null), 4000)
+              return
+            }
+            setEditing(null); setShowModal(true) 
+          }}>
             <Plus size={14} /> Crear tarea
           </button>
         </div>

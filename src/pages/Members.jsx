@@ -4,7 +4,7 @@ import { FamilyMember, TaskCompletion, getLevelInfo, MEMBER_COLORS } from '../li
 import { Auth } from '../lib/auth.js'
 
 // ─── Modal: Buscar y vincular miembro ────────────────────────────────────────
-function LinkMemberModal({ onClose, onSuccess, currentFamilyId, existingMemberEmails }) {
+function LinkMemberModal({ onClose, onSuccess, currentFamilyId, existingMemberEmails, isFreePlan, adminCount, childCount }) {
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('child')
   const [searching, setSearching] = useState(false)
@@ -51,8 +51,20 @@ function LinkMemberModal({ onClose, onSuccess, currentFamilyId, existingMemberEm
 
   const handleLink = async () => {
     if (!foundMember) return
-    setLinking(true)
     setError('')
+
+    if (isFreePlan) {
+      if (role === 'admin' && adminCount >= 1) {
+        setError('🏆 Plan Gratuito: Solo puedes tener 1 Padre/Madre por familia. Actualiza a Premium.')
+        return
+      }
+      if (role === 'child' && childCount >= 1) {
+        setError('🏆 Plan Gratuito: Solo puedes tener 1 Hijo/a por familia. Actualiza a Premium.')
+        return
+      }
+    }
+
+    setLinking(true)
     try {
       const result = await Auth.linkMemberToFamily(foundMember.email, currentFamilyId, role)
 
@@ -529,6 +541,9 @@ export default function Members() {
           onSuccess={handleLinkSuccess}
           currentFamilyId={currentFamilyId}
           existingMemberEmails={existingEmails}
+          isFreePlan={currentUser?.plan !== 'premium' && currentUser?.role !== 'superadmin'}
+          adminCount={admins.length}
+          childCount={children.length}
         />
       )}
 

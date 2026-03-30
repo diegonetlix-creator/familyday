@@ -325,6 +325,23 @@ export default function Teacher() {
   
   if (!user) return <div>Inicia sesión para continuar</div>
 
+  const isPremium = members.some(m => m.role === 'admin' && m.plan === 'premium') || user.role === 'superadmin' || user.plan === 'premium'
+
+  if (!isPremium) {
+    return (
+      <div className="anim-fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 40, background: '#fff', borderRadius: 20, boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ width: 80, height: 80, background: 'var(--purple-50)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--purple-600)', marginBottom: 20 }}>
+           <Lock size={32} />
+        </div>
+        <h2 style={{ fontSize: 24, fontWeight: 900, color: 'var(--purple-800)', marginBottom: 12 }}>Teacher IA Premium</h2>
+        <p style={{ color: 'var(--text-secondary)', maxWidth: 400, lineHeight: 1.6, marginBottom: 32 }}>
+          Descubre el poder de la Inteligencia Artificial para asistir a tus hijos con sus tareas escolares. Actualiza al Plan Premium para desbloquear esta poderosa herramienta.
+        </p>
+        <button className="btn btn-primary" onClick={() => window.location.href = '/'}>Volver al Inicio</button>
+      </div>
+    )
+  }
+
   if (user.role === 'admin') {
     return <AdminTeacherPanel members={members} onToggle={handleToggle} />
   }

@@ -120,7 +120,21 @@ export default function Settings() {
   if (!currentUser) return <div className="loading-wrap"><p style={{ color: 'var(--text-muted)' }}>No se pudo cargar el perfil.</p></div>
 
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin'
+  const isPremium = currentUser?.plan === 'premium' || currentUser?.role === 'superadmin'
   const children = members.filter(m => m.role === 'child')
+
+  if (!isPremium) {
+    return (
+      <div className="anim-fade-in" style={{ maxWidth: 600, margin: '80px auto', textAlign: 'center', padding: 40, background: '#fff', borderRadius: 20, boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ fontSize: 64, marginBottom: 20 }}>🔒</div>
+        <h2 style={{ fontSize: 24, fontWeight: 900, color: 'var(--purple-800)', marginBottom: 12 }}>Ajustes Premium</h2>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: 32, fontSize: 16, lineHeight: 1.6 }}>
+          El plan gratuito no incluye acceso a los ajustes de personalización ni cambio de fotos de perfil. Actualiza a Premium para desbloquear estas funcionalidades y muchas más.
+        </p>
+        <button className="btn btn-primary" style={{ margin: '0 auto' }} onClick={() => window.location.href = '/'}>Volver al Inicio</button>
+      </div>
+    )
+  }
 
   return (
     <div className="anim-fade-in" style={{ maxWidth: 800, margin: '0 auto', paddingBottom: 40 }}>
