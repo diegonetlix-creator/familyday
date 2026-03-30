@@ -231,6 +231,18 @@ export default function Rewards() {
     }
   }
 
+  const handleApproveRedemption = async (id) => {
+    setLoading(true)
+    try {
+      await RewardRedemption.update(id, { status: 'approved' })
+      loadData()
+    } catch (err) {
+      alert('Error al aprobar: ' + err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleDelete = async id => {
     if (!confirm('¿Eliminar este premio?')) return
     await Reward.delete(id); loadData()
@@ -329,9 +341,37 @@ export default function Rewards() {
             </div>
           ) : redemptions.map(red => {
             const m = members.find(x => x.id === red.user_id)
+            const isApproved = red.status === 'approved'
+
+            if (isApproved) {
+              return (
+                <div key={red.id} style={{
+                  background: 'linear-gradient(135deg, var(--purple-600), var(--blue-600))',
+                  color: 'white', padding: 20, borderRadius: 16, display: 'flex',
+                  justifyContent: 'space-between', alignItems: 'center', position: 'relative',
+                  overflow: 'hidden', boxShadow: '0 8px 24px rgba(139, 92, 246, 0.3)',
+                  border: '2px dashed rgba(255,255,255,0.3)'
+                }}>
+                  {/* Perforations */}
+                  <div style={{ position: 'absolute', left: -10, top: '50%', transform: 'translateY(-50%)', width: 20, height: 20, background: 'var(--bg-default)', borderRadius: '50%' }} />
+                  <div style={{ position: 'absolute', right: -10, top: '50%', transform: 'translateY(-50%)', width: 20, height: 20, background: 'var(--bg-default)', borderRadius: '50%' }} />
+                  
+                  <div style={{ zIndex: 1, paddingLeft: 10 }}>
+                    <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, opacity: 0.8, marginBottom: 4, fontWeight: 700 }}>🎟️ Ticket de Regalo Validado</div>
+                    <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 2 }}>{red.reward_title}</div>
+                    <div style={{ fontSize: 13, opacity: 0.9 }}>Para: <strong>{m?.name}</strong></div>
+                  </div>
+                  <div style={{ textAlign: 'right', zIndex: 1, paddingRight: 10 }}>
+                    <div style={{ fontSize: 32, marginBottom: 6 }}>🎁</div>
+                    <div style={{ fontSize: 11, fontWeight: 800, background: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: 8, textTransform: 'uppercase', letterSpacing: 1 }}>APROBADO</div>
+                  </div>
+                </div>
+              )
+            }
+
             return (
               <div key={red.id} className="card card-p" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{ width: 48, height: 48, borderRadius: '50%', background: m?.color || 'var(--purple-500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 18, color: '#fff', flexShrink: 0, overflow: 'hidden' }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: m?.color || 'var(--amber-500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 16, color: '#fff', flexShrink: 0, overflow: 'hidden' }}>
                   {m?.avatar_url ? (
                     <img src={m.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
@@ -340,12 +380,16 @@ export default function Rewards() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 800, fontSize: 14 }}>{red.reward_title}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{m?.name} · {new Date(red.createdAt).toLocaleDateString('es-ES')}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{m?.name} · Solicitado: {new Date(red.createdAt).toLocaleDateString('es-ES')}</div>
                 </div>
-                <span className="chip chip-purple">-{red.points_spent} pts</span>
-                <span className={`chip ${red.status === 'approved' ? 'chip-green' : 'chip-amber'}`}>
-                  {red.status === 'approved' ? '✅ Entregado' : '⏳ Pendiente'}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span className="chip chip-amber">⏳ Pendiente de aprobación</span>
+                  {isAdmin && (
+                    <button className="btn btn-primary btn-sm" onClick={() => handleApproveRedemption(red.id)}>
+                      <Check size={14} /> Aprobar
+                    </button>
+                  )}
+                </div>
               </div>
             )
           })}
