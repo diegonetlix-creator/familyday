@@ -44,6 +44,13 @@ export default function Layout() {
       const activeMember = currentUser ? (members.find(m => m.id === (currentUser.userId || currentUser.id)) || currentUser) : (members[0] || currentUser)
       setMember(activeMember)
       setPendingCount(pending)
+
+      // Detect stale session family_id
+      if (currentUser && activeMember && currentUser.family_id !== activeMember.family_id) {
+        // Family changed in DB, sync local session
+        await Auth.refreshSession()
+        window.location.reload()
+      }
     } catch (err) {
       console.error("Layout optimized load error:", err)
     }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Search, CheckCircle, Clock, Camera, X, Send } from 'lucide-react'
 import { Task, TaskCompletion, FamilyMember, CATEGORY_EMOJI, CATEGORY_LABEL, DIFFICULTY_LABEL, FREQUENCY_LABEL } from '../lib/store.js'
+import { Auth } from '../lib/auth.js'
 
 function CompleteModal({ task, members, onSubmit, onClose }) {
   const [memberId, setMemberId]     = useState('')
@@ -212,7 +213,13 @@ export default function MyTasks() {
 
   const DIFF_BORDER = { facil: 'var(--green-500)', media: 'var(--amber-500)', dificil: 'var(--red-500)' }
 
-  const filtered = tasks.filter(t => t.title?.toLowerCase().includes(search.toLowerCase()))
+  const currentUser = Auth.getCurrentUser()
+
+  const filtered = tasks.filter(t => {
+    const matchSearch = t.title?.toLowerCase().includes(search.toLowerCase())
+    const matchAssign = !t.assigned_to || t.assigned_to.length === 0 || (currentUser && t.assigned_to.includes(currentUser.id || currentUser.userId))
+    return matchSearch && matchAssign
+  })
 
   const todayCompletions = completions.filter(c => new Date(c.createdAt).toDateString() === new Date().toDateString())
 
