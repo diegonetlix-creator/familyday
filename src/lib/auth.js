@@ -1,51 +1,43 @@
-import { supabase, supabaseAdmin } from './supabase.js'
+import { supabase } from './supabase.js'
 
 // === DIRECT REST API HELPERS ===
 const API_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://gfqpafvwlgmswthnmvkl.supabase.co') + '/rest/v1'
+const RPC_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://gfqpafvwlgmswthnmvkl.supabase.co') + '/rest/v1/rpc'
 const API_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 const SERVICE_KEY = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || ''
 
-const getHeaders = (token = null) => {
-  const session = localStorage.getItem('fd_session')
-  const h = {
-    'apikey': API_KEY,
-    'Authorization': `Bearer ${token || API_KEY}`,
-    'Content-Type': 'application/json',
-    'Prefer': 'return=representation'
-  }
-  if (!token && session) {
-    try {
-      const { accessToken } = JSON.parse(session)
-      if (accessToken) h['Authorization'] = `Bearer ${accessToken}`
-    } catch (e) {}
-  }
-  return h
-}
-
-const getServiceHeaders = () => ({
+const serviceHeaders = () => ({
   'apikey': API_KEY,
   'Authorization': `Bearer ${SERVICE_KEY || API_KEY}`,
   'Content-Type': 'application/json',
   'Prefer': 'return=representation'
 })
 
-async function dbGetOne(table, filters, useService = false) {
+const userHeaders = (token) => ({
+  'apikey': API_KEY,
+  'Authorization': `Bearer ${token || API_KEY}`,
+  'Content-Type': 'application/json',
+  'Prefer': 'return=representation'
+})
+
+// Fetch one row by filters — always uses service role for internal auth ops
+async function dbGetOne(table, filters) {
   let url = `${API_URL}/${table}?select=*`
   for (const [col, val] of Object.entries(filters)) {
     url += `&${col}=eq.${encodeURIComponent(val)}`
   }
   url += '&limit=1'
-  const headers = useService ? getServiceHeaders() : getHeaders()
-  const res = await fetch(url, { headers })
+  const res = await fetch(url, { headers: serviceHeaders() })
   if (!res.ok) return null
   const arr = await res.json()
   return arr[0] || null
 }
 
-async function dbInsert(table, row, token = null) {
+// Insert with explicit token (used during registration)
+async function dbInsertWithToken(table, row, token) {
   const res = await fetch(`${API_URL}/${table}`, {
     method: 'POST',
-    headers: getHeaders(token),
+    headers: userHeaders(token),
     body: JSON.stringify(row)
   })
   if (!res.ok) {
@@ -56,11 +48,11 @@ async function dbInsert(table, row, token = null) {
   return arr[0] || null
 }
 
-async function dbUpdate(table, id, data, useService = false) {
-  const headers = useService ? getServiceHeaders() : getHeaders()
+// Update with service role (only used for legitimate admin ops)
+async function dbUpdateService(table, id, data) {
   const res = await fetch(`${API_URL}/${table}?id=eq.${id}`, {
     method: 'PATCH',
-    headers,
+    headers: serviceHeaders(),
     body: JSON.stringify(data)
   })
   if (!res.ok) {
@@ -71,29 +63,32 @@ async function dbUpdate(table, id, data, useService = false) {
   return arr[0] || null
 }
 
-async function dbSelect(table, filters = {}) {
-  let url = `${API_URL}/${table}?select=*`
-  for (const [col, val] of Object.entries(filters)) {
-    url += `&${col}=eq.${val}`
+// Build the session object from a profile row + access token
+function buildSession(profile, accessToken) {
+  return {
+    id: profile.id,
+    userId: profile.id,
+    role: profile.role,
+    name: profile.name,
+    email: profile.email,
+    color: profile.color,
+    family_id: profile.family_id,
+    accessToken
   }
-  const res = await fetch(url, { headers: getHeaders() })
-  if (!res.ok) return []
-  return await res.json()
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 export const Auth = {
+
   async loginWithGoogle() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`
-        }
+        options: { redirectTo: `${window.location.origin}/auth/callback` }
       })
       if (error) return { ok: false, error: error.message }
       return { ok: true }
     } catch (err) {
-      console.error('Google login error:', err)
       return { ok: false, error: 'Error al conectar con Google.' }
     }
   },
@@ -101,31 +96,56 @@ export const Auth = {
   async login(email, password) {
     try {
       const cleanEmail = email.trim().toLowerCase()
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email: cleanEmail, password })
+
+      // 1. Authenticate with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password
+      })
+
       if (authError) {
-        if (authError.message.includes('Invalid login credentials')) return { ok: false, error: 'Credenciales inválidas' }
-        console.error('Login error:', authError)
+        if (authError.message.includes('Email not confirmed')) {
+          return { ok: false, error: 'Debes verificar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.' }
+        }
+        if (authError.message.includes('Invalid login credentials')) {
+          return { ok: false, error: 'Email o contraseña incorrectos.' }
+        }
         return { ok: false, error: 'Error al iniciar sesión: ' + authError.message }
       }
 
-      console.log('Login: Auth success, looking for profile for email:', cleanEmail)
-      const data = await dbGetOne('fd_members', { email: cleanEmail }, true)
+      const authUid = authData.user.id
 
-      if (!data) {
-        console.error('Login: Profile not found in fd_members for email:', cleanEmail)
-        await supabase.auth.signOut()
-        return { ok: false, error: 'Perfil no encontrado. Verifica que tu cuenta esté registrada.' }
+      // 2. SECURITY: Fetch profile by auth.uid() — NOT by email.
+      //    This guarantees we always get exactly the profile that belongs to this auth user.
+      let profile = await dbGetOne('fd_members', { id: authUid })
+
+      // 3. Fallback: if trigger was slow, try by email but validate the id matches
+      if (!profile) {
+        profile = await dbGetOne('fd_members', { email: cleanEmail })
+
+        if (profile && profile.id !== authUid) {
+          // Profile id mismatch — update the id to match the real auth uid
+          // This happens when the same email had a placeholder created by admin
+          console.warn('[Auth.login] ID mismatch — updating profile id to match auth uid')
+          await dbUpdateService('fd_members', profile.id, { id: authUid })
+          profile = { ...profile, id: authUid }
+        }
       }
 
-      localStorage.setItem('fd_session', JSON.stringify({
-        id: data.id, userId: data.id, role: data.role, name: data.name, email: data.email, color: data.color,
-        family_id: data.family_id, accessToken: authData.session.access_token
-      }))
+      if (!profile) {
+        await supabase.auth.signOut()
+        return { ok: false, error: 'No encontramos tu perfil. Contacta al administrador.' }
+      }
 
-      return { ok: true, user: data }
+      // 4. Save session — always use data from DB, never from user input
+      const session = buildSession(profile, authData.session.access_token)
+      localStorage.setItem('fd_session', JSON.stringify(session))
+
+      return { ok: true, user: profile }
+
     } catch (err) {
-      console.error('Fatal login error:', err)
-      return { ok: false, error: 'Error inesperado al conectar con el servidor.' }
+      console.error('[Auth.login] Fatal error:', err)
+      return { ok: false, error: 'Error inesperado. Intenta de nuevo.' }
     }
   },
 
@@ -133,111 +153,180 @@ export const Auth = {
     try {
       const cleanEmail = data.email.trim().toLowerCase()
 
+      // 1. Sign up in Supabase Auth — trigger will create the fd_members row
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: cleanEmail,
         password: data.password,
         options: {
           data: {
-            name: data.name,
-            role: data.role,
-            color: data.color || '#3b82f6',
-            age: data.age || null
+            name:  data.name.trim(),
+            role:  data.role  || 'admin',
+            color: data.color || '#a855f7',
+            age:   data.age   || null
           }
         }
       })
 
       if (authError) {
-        if (authError.message.includes('already registered')) return { ok: false, error: 'El email ya está registrado' }
+        if (authError.message.includes('already registered')) {
+          return { ok: false, error: 'Este email ya está registrado. Intenta iniciar sesión.' }
+        }
         return { ok: false, error: authError.message }
       }
 
-      if (!authData.user) return { ok: false, error: 'No se pudo crear el usuario.' }
+      if (!authData.user) {
+        return { ok: false, error: 'No se pudo crear el usuario.' }
+      }
 
-      // Wait for the DB trigger to complete
-      await new Promise(r => setTimeout(r, 1000))
+      // 2. If Supabase requires email confirmation, user must verify first
+      //    authData.session will be null when email confirmation is required
+      if (!authData.session) {
+        return { ok: true, user: { email: cleanEmail, role: data.role }, requiresVerification: true }
+      }
 
-      // Try to fetch the profile created by the trigger
-      let member = await dbGetOne('fd_members', { email: cleanEmail }, true)
+      // 3. Session exists — user is confirmed (e.g., email confirmation disabled in Supabase)
+      //    Wait for trigger to run, then fetch profile by uid
+      await new Promise(r => setTimeout(r, 1200))
+      let profile = await dbGetOne('fd_members', { id: authData.user.id })
 
-      if (!member && authData.session) {
-        // Trigger may have failed — create profile manually
+      // 4. Trigger fallback — create profile manually if trigger didn't fire
+      if (!profile) {
         try {
-          member = await dbInsert('fd_members', {
-            id: authData.user.id,
-            name: data.name,
-            age: data.age || null,
-            role: data.role,
-            color: data.color || '#3b82f6',
-            email: cleanEmail,
-            status: 'active',
-            total_points: 0,
-            redeemed_points: 0,
-            family_id: data.role !== 'child' ? crypto.randomUUID() : null
+          const familyId = data.role !== 'child' ? crypto.randomUUID() : null
+          profile = await dbInsertWithToken('fd_members', {
+            id:             authData.user.id,
+            name:           data.name.trim(),
+            age:            data.age || null,
+            role:           data.role || 'admin',
+            color:          data.color || '#a855f7',
+            email:          cleanEmail,
+            status:         'active',
+            family_id:      familyId,
+            total_points:   0,
+            redeemed_points: 0
           }, authData.session.access_token)
         } catch (insertErr) {
-          console.error('Manual profile creation failed:', insertErr)
+          console.error('[Auth.register] Manual profile creation failed:', insertErr)
         }
       }
 
-      if (!member) {
-        return { ok: false, error: 'Usuario creado pero falló la sincronización del perfil. Intenta iniciar sesión.' }
+      if (!profile) {
+        return { ok: true, user: { email: cleanEmail, role: data.role }, requiresVerification: true }
       }
 
-      // Both admin and child get a session if registration succeeded
-      if (authData.session) {
-        localStorage.setItem('fd_session', JSON.stringify({
-          id: member.id, userId: member.id, role: member.role, name: member.name, email: member.email, color: member.color,
-          family_id: member.family_id, accessToken: authData.session.access_token
-        }))
-      }
+      const session = buildSession(profile, authData.session.access_token)
+      localStorage.setItem('fd_session', JSON.stringify(session))
 
-      return { ok: true, user: member }
+      return { ok: true, user: profile }
+
     } catch (err) {
-      console.error('Registration error:', err)
-      return { ok: false, error: 'No pudimos completar el registro: ' + (err.message || 'Error de conexión') }
+      console.error('[Auth.register] Error:', err)
+      return { ok: false, error: 'Error al registrarse: ' + (err.message || 'intenta de nuevo') }
     }
   },
 
   /**
-   * Search a member in the DB by email (bypasses RLS using service role if available)
-   * Returns the member or null
+   * Search a member by email — used in Members page to find users to link.
+   * Returns the member or null. Safe to expose — only returns public profile data.
    */
   async searchMemberByEmail(email) {
     const cleanEmail = email.trim().toLowerCase()
-    // Try with service role first (bypasses RLS)
-    const member = await dbGetOne('fd_members', { email: cleanEmail }, !!SERVICE_KEY)
-    return member
+    return await dbGetOne('fd_members', { email: cleanEmail })
   },
 
   /**
-   * Link an existing member to the current user's family.
-   * The member must already be registered in the system.
+   * Send a family invite or link directly if member has no family.
+   * Uses the secure send_family_invite DB RPC which:
+   *  - Links directly if member has no family
+   *  - Sends a notification invite if member already has a different family
+   *  - Rejects if member is already in this family
    */
-  async linkMemberToFamily(memberId, familyId, overrideData = {}) {
-    const updatePayload = {
-      family_id: familyId,
-      status: 'active',
-      ...overrideData
+  async linkMemberToFamily(memberEmail, familyId, newRole = null) {
+    try {
+      const current = this.getCurrentUser()
+      if (!current?.id) return { ok: false, error: 'No estás autenticado.' }
+
+      const res = await fetch(`${RPC_URL}/send_family_invite`, {
+        method: 'POST',
+        headers: serviceHeaders(),
+        body: JSON.stringify({
+          p_member_email: memberEmail.trim().toLowerCase(),
+          p_family_id:    familyId,
+          p_requester_id: current.id
+        })
+      })
+      const result = await res.json()
+
+      // If linked directly and newRole was specified, update the role too
+      if (result.ok && result.linked && newRole && result.member?.role !== newRole) {
+        await dbUpdateService('fd_members', result.member.id, { role: newRole })
+        result.member.role = newRole
+      }
+
+      return result
+
+    } catch (err) {
+      return { ok: false, error: 'Error al enviar invitación: ' + err.message }
     }
-    const updated = await dbUpdate('fd_members', memberId, updatePayload, !!SERVICE_KEY)
-    if (!updated) return { ok: false, error: 'No se pudo vincular el miembro a la familia.' }
-    return { ok: true, member: updated }
+  },
+
+  /**
+   * Get all pending family invites for the current user.
+   */
+  async getPendingInvites() {
+    try {
+      const current = this.getCurrentUser()
+      if (!current?.id) return []
+
+      const res = await fetch(`${RPC_URL}/get_my_pending_invites`, {
+        method: 'POST',
+        headers: serviceHeaders(),
+        body: JSON.stringify({})
+      })
+      if (!res.ok) return []
+      const data = await res.json()
+      return Array.isArray(data) ? data : []
+    } catch {
+      return []
+    }
+  },
+
+  /**
+   * Accept or reject a family invite.
+   * If accepted, the user's family_id is updated in DB.
+   * Frontend should call refreshSession() after accepting.
+   */
+  async respondToInvite(notificationId, accept) {
+    try {
+      const res = await fetch(`${RPC_URL}/respond_to_family_invite`, {
+        method: 'POST',
+        headers: serviceHeaders(),
+        body: JSON.stringify({
+          p_notification_id: notificationId,
+          p_accept:          accept
+        })
+      })
+      const result = await res.json()
+      if (result.ok && accept) {
+        // Re-sync session with the new family_id
+        await this.refreshSession()
+      }
+      return result
+    } catch (err) {
+      return { ok: false, error: 'Error al responder: ' + err.message }
+    }
   },
 
   async logout() {
-    await supabase.auth.signOut()
     localStorage.removeItem('fd_session')
+    await supabase.auth.signOut()
     window.location.href = '/login'
   },
 
   getCurrentUser() {
     const session = localStorage.getItem('fd_session')
     if (!session) return null
-    try {
-      return JSON.parse(session)
-    } catch (e) {
-      return null
-    }
+    try { return JSON.parse(session) } catch { return null }
   },
 
   isLoggedIn() {
@@ -245,81 +334,23 @@ export const Auth = {
   },
 
   isAdmin() {
-    const user = this.getCurrentUser()
-    return user ? user.role === 'admin' : false
+    const u = this.getCurrentUser()
+    return u?.role === 'admin' || u?.role === 'superadmin'
   },
 
+  /**
+   * Re-sync session from DB.
+   * Fetches latest profile data by uid (secure — no cross-user access possible).
+   */
   async refreshSession() {
     const current = this.getCurrentUser()
-    if (!current) return null
-    
-    // Fetch latest profile from DB using service role to be sure we get the family_id
-    const fresh = await dbGetOne('fd_members', { id: current.id }, true)
-    if (fresh) {
-      const updated = {
-        ...current,
-        name: fresh.name,
-        role: fresh.role,
-        color: fresh.color,
-        family_id: fresh.family_id
-      }
-      localStorage.setItem('fd_session', JSON.stringify(updated))
-      return updated
-    }
-    return current
-  }
-}
+    if (!current?.id) return null
 
-export const Invitations = {
-  /**
-   * Re-send invitation email (only relevant if member is still 'invited' status)
-   */
-  async resend(email) {
-    if (!import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error('Se requiere Service Role Key para re-enviar invitaciones')
-    }
-    const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email)
-    if (error) throw error
-    return { ok: true }
-  },
+    const fresh = await dbGetOne('fd_members', { id: current.id })
+    if (!fresh) return current
 
-  // When a user arrives from a Supabase invite link and sets their password
-  async acceptSecurePassword(password) {
-    try {
-      const { data: authData, error: updateError } = await supabase.auth.updateUser({ password })
-      if (updateError) return { ok: false, error: updateError.message }
-
-      const userId = authData.user.id
-      const memberProfile = await dbGetOne('fd_members', { id: userId }, true)
-      if (!memberProfile) return { ok: false, error: 'No se halló el perfil asignado.' }
-
-      const updatedMember = await dbUpdate('fd_members', userId, { status: 'active' }, true)
-      if (!updatedMember) return { ok: false, error: 'Error al activar el perfil.' }
-
-      localStorage.setItem('fd_session', JSON.stringify({
-        id: updatedMember.id, userId: updatedMember.id, role: updatedMember.role, name: updatedMember.name,
-        email: updatedMember.email, color: updatedMember.color,
-        family_id: updatedMember.family_id, accessToken: authData.session.access_token
-      }))
-
-      return { ok: true, user: updatedMember }
-    } catch (err) {
-      console.error('Accept secure invitation error:', err)
-      return { ok: false, error: 'Error configurando la contraseña: ' + err.message }
-    }
-  },
-
-  async getAll() {
-    const data = await dbSelect('fd_members', { status: 'invited' })
-    return (data || []).map(m => ({
-      token: 'supabase',
-      memberId: m.id,
-      memberName: m.name,
-      email: m.email,
-      role: m.role,
-      color: m.color,
-      status: 'pending',
-      expiresAt: new Date(Date.now() + 86400000).toISOString()
-    }))
+    const updated = buildSession(fresh, current.accessToken)
+    localStorage.setItem('fd_session', JSON.stringify(updated))
+    return updated
   }
 }

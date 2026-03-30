@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, ClipboardList, Users, CheckSquare, Star, Gift, Trophy, Menu, X, Home, Bell, LogOut, Bot, Settings } from 'lucide-react'
+import { LayoutDashboard, ClipboardList, Users, CheckSquare, Star, Gift, Trophy, Menu, X, Home, LogOut, Bot, Settings } from 'lucide-react'
 import { FamilyMember, TaskCompletion, getLevelInfo } from '../lib/store.js'
 import { Auth } from '../lib/auth.js'
+import NotificationBell from './NotificationBell.jsx'
 
 function XpRing({ progress, size = 44, color = '#7c3aed' }) {
   const r = (size - 6) / 2
@@ -157,7 +158,10 @@ export default function Layout() {
         Cerrar sesión
       </button>
 
-      <div className="sidebar-footer">Family Day v1.0 · 2026</div>
+      <div style={{ padding: '8px 12px', borderTop: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <NotificationBell />
+        <div className="sidebar-footer" style={{ border: 'none', padding: 0, margin: 0 }}>Family Day v1.0</div>
+      </div>
     </>
   )
 
@@ -178,14 +182,7 @@ export default function Layout() {
           <span className="logo-name" style={{ fontSize: 16 }}>Family Day</span>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {pendingCount > 0 && (
-            <div style={{ position: 'relative' }}>
-              <Bell size={18} color="rgba(255,255,255,.7)" />
-              <span style={{ position: 'absolute', top: -4, right: -4, width: 14, height: 14, background: '#ef4444', borderRadius: '50%', fontSize: 9, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
-                {pendingCount}
-              </span>
-            </div>
-          )}
+          <NotificationBell />
           <button className="mobile-menu-btn" onClick={() => setOpen(!open)}>
             {open ? <X size={18} /> : <Menu size={18} />}
           </button>

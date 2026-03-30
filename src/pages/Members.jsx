@@ -54,13 +54,15 @@ function LinkMemberModal({ onClose, onSuccess, currentFamilyId, existingMemberEm
     setLinking(true)
     setError('')
     try {
-      const overrideData = {
-        role: role !== foundMember.role ? role : foundMember.role
-      }
-      const result = await Auth.linkMemberToFamily(foundMember.id, currentFamilyId, overrideData)
-      if (result.ok) {
-        onSuccess(result.member)
-      } else {
+      const result = await Auth.linkMemberToFamily(foundMember.email, currentFamilyId, role)
+
+      if (result.ok && result.linked) {
+        // Direct link — member had no family
+        onSuccess(result.member, false)
+      } else if (result.ok && result.pending) {
+        // Invite sent — member already has a family and must accept
+        onSuccess(null, true, result.message)
+      } else if (!result.ok) {
         setError(result.error)
       }
     } catch (err) {
@@ -317,11 +319,14 @@ export default function Members() {
     }
   }
 
-  const handleLinkSuccess = member => {
+  const handleLinkSuccess = (member, isPending, pendingMsg) => {
     setShowLinkModal(false)
-    showToast(`✅ ${member.name} se vinculó exitosamente a tu familia`)
-    // Delay slightly to give DB trigger/indexes time to reflect the change
-    setTimeout(loadData, 500)
+    if (isPending) {
+      showToast(`📨 ${pendingMsg || 'Invitación enviada. El miembro debe aceptarla.'}`, 'info')
+    } else {
+      showToast(`✅ ${member?.name} se vinculó exitosamente a tu familia`)
+      setTimeout(loadData, 500)
+    }
   }
 
   const handleEditSave = async data => {
@@ -353,7 +358,7 @@ export default function Members() {
         <div className="anim-slide-up" style={{
           position: 'fixed', top: 20, right: 20, zIndex: 1000,
           padding: '12px 20px', borderRadius: 8, color: 'white',
-          background: toast.type === 'error' ? 'var(--red-500)' : 'var(--green-500)',
+          background: toast.type === 'error' ? 'var(--red-500)' : toast.type === 'info' ? 'var(--blue-500)' : 'var(--green-500)',
           boxShadow: '0 4px 12px rgba(0,0,0,0.15)', fontSize: 14, fontWeight: 600
         }}>{toast.text}</div>
       )}
