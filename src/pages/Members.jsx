@@ -327,7 +327,7 @@ export default function Members() {
       showToast(`📨 ${pendingMsg || 'Invitación enviada. El miembro debe aceptarla.'}`, 'info')
       setTimeout(loadData, 500)
     } else {
-      showToast(`✅ ${member?.name} se vinculó exitosamente a tu familia`)
+      showToast(`✅ ${member?.name || 'El miembro'} se vinculó exitosamente a tu familia`)
       setTimeout(loadData, 500)
     }
   }
