@@ -63,6 +63,9 @@ export default function Dashboard() {
     </div>
   )
 
+  const currentUserObj = members.find(m => m.id === (user?.id || user?.userId)) || user
+  const isPremium = currentUserObj?.plan === 'premium' || currentUserObj?.role === 'superadmin' || members.some(m => m.role === 'admin' && m.plan === 'premium')
+
   if (user?.role === 'child') {
     const myCompletions = completions.filter(c => c.member_id === user.id)
     const activeTasks   = tasks.slice(0, 3)
@@ -84,8 +87,21 @@ export default function Dashboard() {
           overflow: 'hidden'
         }}>
           <div style={{ position: 'relative', zIndex: 2 }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 32, marginBottom: 8 }}>¡Hola, {user.name}! 👋</h1>
-            <p style={{ opacity: 0.9, fontSize: 16 }}>¡Tienes un gran día por delante para ganar puntos!</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 32, marginBottom: 8 }}>¡Hola, {user.name}! 👋</h1>
+                <p style={{ opacity: 0.9, fontSize: 16 }}>¡Tienes un gran día por delante para ganar puntos!</p>
+              </div>
+              {isPremium ? (
+                <div style={{ background: 'rgba(255,255,255,0.2)', padding: '6px 12px', borderRadius: 99, fontSize: 12, fontWeight: 800, backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  👑 Premium
+                </div>
+              ) : (
+                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '6px 12px', borderRadius: 99, fontSize: 12, fontWeight: 800, backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  ⭐ Plan Gratuito
+                </div>
+              )}
+            </div>
             
             <div style={{ marginTop: 24, background: 'rgba(255,255,255,0.15)', padding: 20, borderRadius: 'var(--r-lg)', backdropFilter: 'blur(10px)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>
@@ -205,6 +221,28 @@ export default function Dashboard() {
           </button>
         </Link>
       </div>
+
+      {!isPremium ? (
+        <div style={{ background: 'linear-gradient(135deg, var(--purple-600), var(--pink-500))', padding: '16px 24px', borderRadius: 16, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, boxShadow: 'var(--shadow-md)', flexWrap: 'wrap', gap: 16 }}>
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>🚀 Estás en el Plan Gratuito</h3>
+            <p style={{ margin: 0, opacity: 0.9, fontSize: 13, marginTop: 4 }}>Tienes {tasks.length}/5 tareas permitidas y límite de perfiles (1 hijo, 1 padre).</p>
+          </div>
+          <button className="btn" style={{ background: 'white', color: 'var(--purple-600)', width: 'auto' }}>
+            👑 Mejorar a Premium
+          </button>
+        </div>
+      ) : (
+        <div style={{ background: 'linear-gradient(135deg, var(--green-500), var(--emerald-500))', padding: '12px 20px', borderRadius: 12, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 20 }}>👑</span>
+            <div>
+              <h3 style={{ fontSize: 14, fontWeight: 800, margin: 0 }}>Plan Premium Activo</h3>
+              <p style={{ margin: 0, opacity: 0.9, fontSize: 12 }}>Disfrutando de tareas ilimitadas, miembros ilimitados y Teacher IA.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stat grid */}
       <div className="stat-grid">
