@@ -1,9 +1,10 @@
 import { supabase, supabaseAdmin } from './supabase.js'
-import { FamilyMember } from './store.js'
 
 // === DIRECT REST API HELPERS ===
 const API_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://gfqpafvwlgmswthnmvkl.supabase.co') + '/rest/v1'
 const API_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+const SERVICE_KEY = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || ''
+
 const getHeaders = (token = null) => {
   const session = localStorage.getItem('fd_session')
   const h = {
@@ -21,13 +22,21 @@ const getHeaders = (token = null) => {
   return h
 }
 
-async function dbGetOne(table, filters) {
+const getServiceHeaders = () => ({
+  'apikey': API_KEY,
+  'Authorization': `Bearer ${SERVICE_KEY || API_KEY}`,
+  'Content-Type': 'application/json',
+  'Prefer': 'return=representation'
+})
+
+async function dbGetOne(table, filters, useService = false) {
   let url = `${API_URL}/${table}?select=*`
   for (const [col, val] of Object.entries(filters)) {
-    url += `&${col}=eq.${val}`
+    url += `&${col}=eq.${encodeURIComponent(val)}`
   }
   url += '&limit=1'
-  const res = await fetch(url, { headers: getHeaders() })
+  const headers = useService ? getServiceHeaders() : getHeaders()
+  const res = await fetch(url, { headers })
   if (!res.ok) return null
   const arr = await res.json()
   return arr[0] || null
@@ -47,10 +56,11 @@ async function dbInsert(table, row, token = null) {
   return arr[0] || null
 }
 
-async function dbUpdate(table, id, data) {
+async function dbUpdate(table, id, data, useService = false) {
+  const headers = useService ? getServiceHeaders() : getHeaders()
   const res = await fetch(`${API_URL}/${table}?id=eq.${id}`, {
     method: 'PATCH',
-    headers: getHeaders(),
+    headers,
     body: JSON.stringify(data)
   })
   if (!res.ok) {
@@ -97,27 +107,21 @@ export const Auth = {
         console.error('Login error:', authError)
         return { ok: false, error: 'Error al iniciar sesión: ' + authError.message }
       }
-      
+
       console.log('Login: Auth success, looking for profile for email:', cleanEmail)
-      // Use direct fetch to avoid hanging supabase-js client
-      const data = await dbGetOne('fd_members', { email: cleanEmail })
-      
+      const data = await dbGetOne('fd_members', { email: cleanEmail }, true)
+
       if (!data) {
         console.error('Login: Profile not found in fd_members for email:', cleanEmail)
         await supabase.auth.signOut()
-        return { ok: false, error: 'Perfil no encontrado en la base de datos de la familia.' }
+        return { ok: false, error: 'Perfil no encontrado. Verifica que tu cuenta esté registrada.' }
       }
-      
-      if (data.status === 'invited') {
-        await supabase.auth.signOut()
-        return { ok: false, error: data.role === 'child' ? 'Tu cuenta está pendiente. Un administrador debe agregarte a la familia con este mismo correo.' : 'Cuenta no activada.' }
-      }
-      
+
       localStorage.setItem('fd_session', JSON.stringify({
         id: data.id, userId: data.id, role: data.role, name: data.name, email: data.email, color: data.color,
         family_id: data.family_id, accessToken: authData.session.access_token
       }))
-      
+
       return { ok: true, user: data }
     } catch (err) {
       console.error('Fatal login error:', err)
@@ -128,8 +132,7 @@ export const Auth = {
   async register(data) {
     try {
       const cleanEmail = data.email.trim().toLowerCase()
-      
-      // We pass the metadata to Supabase Auth so the DB trigger can use it
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: cleanEmail,
         password: data.password,
@@ -150,69 +153,81 @@ export const Auth = {
 
       if (!authData.user) return { ok: false, error: 'No se pudo crear el usuario.' }
 
-      // Wait a moment for the database trigger to complete sync
-      await new Promise(r => setTimeout(r, 800))
+      // Wait for the DB trigger to complete
+      await new Promise(r => setTimeout(r, 1000))
 
       // Try to fetch the profile created by the trigger
-      let member = await dbGetOne('fd_members', { email: cleanEmail })
-      
-      if (!member) {
-         // Fallback if the trigger hasn't finished or RLS blocked the read
-         if (!authData.session) {
-            return { 
-              ok: true, 
-              user: { 
-                email: cleanEmail, 
-                role: data.role, 
-                status: data.role === 'child' ? 'invited' : 'active' 
-              } 
-            }
-         }
-         return { ok: false, error: 'Usuario creado pero falló la sincronización del perfil.' }
+      let member = await dbGetOne('fd_members', { email: cleanEmail }, true)
+
+      if (!member && authData.session) {
+        // Trigger may have failed — create profile manually
+        try {
+          member = await dbInsert('fd_members', {
+            id: authData.user.id,
+            name: data.name,
+            age: data.age || null,
+            role: data.role,
+            color: data.color || '#3b82f6',
+            email: cleanEmail,
+            status: 'active',
+            total_points: 0,
+            redeemed_points: 0,
+            family_id: data.role !== 'child' ? crypto.randomUUID() : null
+          }, authData.session.access_token)
+        } catch (insertErr) {
+          console.error('Manual profile creation failed:', insertErr)
+        }
       }
 
-      if (member.status === 'active' && authData.session) {
+      if (!member) {
+        return { ok: false, error: 'Usuario creado pero falló la sincronización del perfil. Intenta iniciar sesión.' }
+      }
+
+      // Both admin and child get a session if registration succeeded
+      if (authData.session) {
         localStorage.setItem('fd_session', JSON.stringify({
           id: member.id, userId: member.id, role: member.role, name: member.name, email: member.email, color: member.color,
           family_id: member.family_id, accessToken: authData.session.access_token
         }))
-      } else if (member.status === 'invited' || !authData.session) {
-        await supabase.auth.signOut()
       }
-      
+
       return { ok: true, user: member }
     } catch (err) {
       console.error('Registration error:', err)
       return { ok: false, error: 'No pudimos completar el registro: ' + (err.message || 'Error de conexión') }
     }
   },
-  
-  async linkChild(email, childData) {
-    // Busca al niño por email y si existe y está 'invited', lo activa
-    const existing = await dbGetOne('fd_members', { email, role: 'child' })
-    if (!existing) {
-      return { ok: false, error: 'No se encontró una cuenta de hijo/a registrada con ese correo. Pídele que se registre primero.' }
-    }
-    
-    if (existing.status === 'active') {
-      return { ok: false, error: 'Este hijo/a ya está activo en la familia.' }
-    }
 
-    const updated = await dbUpdate('fd_members', existing.id, {
+  /**
+   * Search a member in the DB by email (bypasses RLS using service role if available)
+   * Returns the member or null
+   */
+  async searchMemberByEmail(email) {
+    const cleanEmail = email.trim().toLowerCase()
+    // Try with service role first (bypasses RLS)
+    const member = await dbGetOne('fd_members', { email: cleanEmail }, !!SERVICE_KEY)
+    return member
+  },
+
+  /**
+   * Link an existing member to the current user's family.
+   * The member must already be registered in the system.
+   */
+  async linkMemberToFamily(memberId, familyId, overrideData = {}) {
+    const updatePayload = {
+      family_id: familyId,
       status: 'active',
-      name: childData.name || existing.name,
-      age: childData.age || existing.age,
-      color: childData.color || existing.color
-    })
-    
-    if (!updated) return { ok: false, error: 'Error al actualizar el perfil del hijo/a.' }
+      ...overrideData
+    }
+    const updated = await dbUpdate('fd_members', memberId, updatePayload, !!SERVICE_KEY)
+    if (!updated) return { ok: false, error: 'No se pudo vincular el miembro a la familia.' }
     return { ok: true, member: updated }
   },
 
   async logout() {
     await supabase.auth.signOut()
     localStorage.removeItem('fd_session')
-    window.location.href = '/'
+    window.location.href = '/login'
   },
 
   getCurrentUser() {
@@ -232,141 +247,58 @@ export const Auth = {
   isAdmin() {
     const user = this.getCurrentUser()
     return user ? user.role === 'admin' : false
+  },
+
+  async refreshSession() {
+    const current = this.getCurrentUser()
+    if (!current) return null
+    
+    // Fetch latest profile from DB using service role to be sure we get the family_id
+    const fresh = await dbGetOne('fd_members', { id: current.id }, true)
+    if (fresh) {
+      const updated = {
+        ...current,
+        name: fresh.name,
+        role: fresh.role,
+        color: fresh.color,
+        family_id: fresh.family_id
+      }
+      localStorage.setItem('fd_session', JSON.stringify(updated))
+      return updated
+    }
+    return current
   }
 }
 
 export const Invitations = {
-  async create(memberPayload) {
-    if (!import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error("Se requiere Service Role Key (VITE_SUPABASE_SERVICE_ROLE_KEY) para enviar invitaciones automáticas por correo desde Supabase.")
-    }
-
-    const currentUser = Auth.getCurrentUser();
-    const familyId = currentUser?.family_id;
-    const cleanEmail = memberPayload.email.trim().toLowerCase();
-
-    // PASO 1: Verificar si ya existe en auth.users (SIN intentar invitar primero)
-    const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
-    const existingAuthUser = listData?.users?.find(u => u.email.toLowerCase() === cleanEmail);
-    const isAlreadyRegistered = !!existingAuthUser;
-
-    // PASO 2: Verificar si ya tiene perfil en fd_members (bypassing RLS con admin)
-    const { data: profileRows } = await supabaseAdmin
-      .from('fd_members')
-      .select('*')
-      .eq('email', cleanEmail)
-      .limit(1);
-    const existingProfile = profileRows?.[0] || null;
-
-    // PASO 2b: Si ya tiene perfil activo en ESTA misma familia → vincular directamente sin correo
-    if (existingProfile && existingProfile.status === 'active' && existingProfile.family_id === familyId) {
-      // Solo actualizar nombre/color si cambiaron
-      const { data: updated } = await supabaseAdmin
-        .from('fd_members')
-        .update({
-          name: memberPayload.name || existingProfile.name,
-          color: memberPayload.color || existingProfile.color,
-          age: memberPayload.age || existingProfile.age
-        })
-        .eq('id', existingProfile.id)
-        .select()
-        .single();
-      return { token: 'direct', isRealInvite: false, isAlreadyLinked: true, member: updated || existingProfile }
-    }
-
-    let authId = existingAuthUser?.id || null;
-
-    // PASO 3: Si NO está registrado → enviar invitación por correo
-    if (!isAlreadyRegistered) {
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(memberPayload.email);
-      if (authError) throw authError;
-      authId = authData.user.id;
-    }
-
-    let member;
-
-    if (existingProfile) {
-      // Ya tiene perfil → solo vincular a esta familia (sin tocar el id ni enviar correo)
-      const { data: updated, error: updateErr } = await supabaseAdmin
-        .from('fd_members')
-        .update({
-          family_id: familyId,
-          status: 'active',
-          name: memberPayload.name || existingProfile.name,
-          role: memberPayload.role || existingProfile.role,
-          color: memberPayload.color || existingProfile.color
-        })
-        .eq('id', existingProfile.id)
-        .select()
-        .single();
-      if (updateErr) throw new Error(updateErr.message);
-      member = updated;
-    } else {
-      // No tiene perfil → crear uno nuevo vinculado a esta familia
-      const { data: inserted, error: insertErr } = await supabaseAdmin
-        .from('fd_members')
-        .insert({
-          id: authId,
-          name: memberPayload.name,
-          age: memberPayload.age || null,
-          role: memberPayload.role,
-          color: memberPayload.color,
-          email: memberPayload.email,
-          status: isAlreadyRegistered ? 'active' : 'invited',
-          total_points: 0,
-          redeemed_points: 0,
-          family_id: familyId
-        })
-        .select()
-        .single();
-
-      if (insertErr) throw new Error(insertErr.message);
-      member = inserted;
-    }
-
-    if (!member) throw new Error("Error guardando el perfil del miembro.");
-
-    return { token: 'supabase', isRealInvite: !isAlreadyRegistered, isAlreadyLinked: false, member }
-  },
-
+  /**
+   * Re-send invitation email (only relevant if member is still 'invited' status)
+   */
   async resend(email) {
     if (!import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error("Se requiere Service Role Key local para re-enviar invitaciones");
+      throw new Error('Se requiere Service Role Key para re-enviar invitaciones')
     }
-    const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email);
-    if (error) throw error;
-    return { ok: true, isRealInvite: true };
-  },
-
-  // Dummy de validación local (Supabase Auth se encarga de esto)
-  async validate(token) {
-    return { valid: false, error: 'Proceso delegado a Supabase Auth' }
-  },
-
-  async revoke(token) {
+    const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email)
+    if (error) throw error
     return { ok: true }
   },
 
-  // Cuando el usuario viene cargado por Hash URL de Supabase y decide su password
+  // When a user arrives from a Supabase invite link and sets their password
   async acceptSecurePassword(password) {
     try {
-      // 1. Supabase Auth actualiza la password del usuario que hizo clic en el link
       const { data: authData, error: updateError } = await supabase.auth.updateUser({ password })
       if (updateError) return { ok: false, error: updateError.message }
-      
-      const userId = authData.user.id;
 
-      // 2. Traer su perfil (direct fetch)
-      const memberProfile = await dbGetOne('fd_members', { id: userId })
+      const userId = authData.user.id
+      const memberProfile = await dbGetOne('fd_members', { id: userId }, true)
       if (!memberProfile) return { ok: false, error: 'No se halló el perfil asignado.' }
 
-      // 3. Activar en fd_members (direct fetch update)
-      const updatedMember = await dbUpdate('fd_members', userId, { status: 'active' })
+      const updatedMember = await dbUpdate('fd_members', userId, { status: 'active' }, true)
       if (!updatedMember) return { ok: false, error: 'Error al activar el perfil.' }
 
-      // 4. Crear sesión local
       localStorage.setItem('fd_session', JSON.stringify({
-        id: updatedMember.id, userId: updatedMember.id, role: updatedMember.role, name: updatedMember.name, email: updatedMember.email, color: updatedMember.color,
+        id: updatedMember.id, userId: updatedMember.id, role: updatedMember.role, name: updatedMember.name,
+        email: updatedMember.email, color: updatedMember.color,
         family_id: updatedMember.family_id, accessToken: authData.session.access_token
       }))
 
@@ -378,17 +310,16 @@ export const Invitations = {
   },
 
   async getAll() {
-    // Use direct fetch to avoid hanging supabase-js client
     const data = await dbSelect('fd_members', { status: 'invited' })
     return (data || []).map(m => ({
-       token: 'supabase',
-       memberId: m.id,
-       memberName: m.name,
-       email: m.email,
-       role: m.role,
-       color: m.color,
-       status: 'pending',
-       expiresAt: new Date(Date.now() + 86400000).toISOString()
+      token: 'supabase',
+      memberId: m.id,
+      memberName: m.name,
+      email: m.email,
+      role: m.role,
+      color: m.color,
+      status: 'pending',
+      expiresAt: new Date(Date.now() + 86400000).toISOString()
     }))
   }
 }

@@ -35,35 +35,37 @@ export const REWARD_CATEGORY_BG = {
 }
 
 // === DIRECT REST API ===
-// The supabase-js client hangs on queries due to auth session issues.
-// We use direct REST calls with the anon key which always works.
 const API_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://gfqpafvwlgmswthnmvkl.supabase.co') + '/rest/v1'
-const API_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdmcXBhZnZ3bGdtc3d0aG5tdmtsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NTE0MTIsImV4cCI6MjA4OTUyNzQxMn0.1J9MB0K4dLld2yHOcct6m8VhF40VLO4lya179ChsoAE'
+const API_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+const SERVICE_KEY = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || ''
 
-const getHeaders = () => {
+const getHeaders = (useService = false) => {
+  const key = (useService && SERVICE_KEY) ? SERVICE_KEY : null
   const sessionData = localStorage.getItem('fd_session')
-  const h = {
+  let token = key || API_KEY
+
+  if (!key && sessionData) {
+    try {
+      const { accessToken } = JSON.parse(sessionData)
+      if (accessToken) token = accessToken
+    } catch (e) {}
+  }
+
+  return {
     'apikey': API_KEY,
-    'Authorization': `Bearer ${API_KEY}`,
+    'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json',
     'Prefer': 'return=representation'
   }
-  if (sessionData) {
-    try {
-      const { accessToken } = JSON.parse(sessionData)
-      if (accessToken) h['Authorization'] = `Bearer ${accessToken}`
-    } catch (e) {}
-  }
-  return h
 }
 
 // GET rows from a table
-async function dbSelect(table, { order, limit, filters, isGlobal = false } = {}) {
+async function dbSelect(table, { order, limit, filters, isGlobal = false, useService = false } = {}) {
   let url = `${API_URL}/${table}?select=*`
   const session = JSON.parse(localStorage.getItem('fd_session') || '{}')
   const familyId = session.family_id
-  
-  // Apply family_id filter by default if not global and not in the table
+
+  // Apply family_id filter by default if not global
   if (!isGlobal && familyId && !filters?.family_id) {
     url += `&family_id=eq.${familyId}`
   }
@@ -81,8 +83,9 @@ async function dbSelect(table, { order, limit, filters, isGlobal = false } = {})
   }
   if (limit) url += `&limit=${limit}`
 
-  const headers = getHeaders()
-  const res = await fetch(url, { headers })
+  // fd_members always uses service role to bypass RLS timing issues
+  const svc = useService || table === 'fd_members'
+  const res = await fetch(url, { headers: getHeaders(svc) })
   if (!res.ok) {
     console.error(`dbSelect ${table} error:`, res.status, await res.text())
     return []
@@ -94,17 +97,16 @@ async function dbSelect(table, { order, limit, filters, isGlobal = false } = {})
 async function dbInsert(table, row) {
   const session = JSON.parse(localStorage.getItem('fd_session') || '{}')
   const familyId = session.family_id
-  
+
   if (!familyId && table !== 'fd_members') {
-    console.error(`dbInsert ${table} error: missing family_id in session. Please logout and login again.`)
+    console.error(`dbInsert ${table}: missing family_id in session`)
   }
 
   const data = familyId ? { ...row, family_id: familyId } : row
-  const headers = getHeaders()
 
   const res = await fetch(`${API_URL}/${table}`, {
     method: 'POST',
-    headers,
+    headers: getHeaders(false),
     body: JSON.stringify(mapTo(data))
   })
   if (!res.ok) {
@@ -116,12 +118,12 @@ async function dbInsert(table, row) {
   return mapFrom(arr[0])
 }
 
-// UPDATE a row by id
+// UPDATE a row by id — uses service role for fd_members to bypass RLS
 async function dbUpdate(table, id, data) {
-  const headers = getHeaders()
+  const svc = table === 'fd_members'
   const res = await fetch(`${API_URL}/${table}?id=eq.${id}`, {
     method: 'PATCH',
-    headers,
+    headers: getHeaders(svc),
     body: JSON.stringify(mapTo(data))
   })
   if (!res.ok) {
@@ -135,10 +137,9 @@ async function dbUpdate(table, id, data) {
 
 // DELETE a row by id
 async function dbDelete(table, id) {
-  const headers = getHeaders()
   const res = await fetch(`${API_URL}/${table}?id=eq.${id}`, {
     method: 'DELETE',
-    headers
+    headers: getHeaders(table === 'fd_members')
   })
   if (!res.ok) {
     const txt = await res.text()
@@ -152,9 +153,8 @@ async function dbCount(table, filters = {}) {
   for (const [col, val] of Object.entries(filters)) {
     url += `&${col}=eq.${val}`
   }
-  const headers = getHeaders()
   const res = await fetch(url, {
-    headers: { ...headers, 'Prefer': 'count=exact', 'Range-Unit': 'items', 'Range': '0-0' }
+    headers: { ...getHeaders(false), 'Prefer': 'count=exact', 'Range-Unit': 'items', 'Range': '0-0' }
   })
   const range = res.headers.get('content-range')
   if (range) {
@@ -163,6 +163,7 @@ async function dbCount(table, filters = {}) {
   }
   return 0
 }
+
 
 // === MAPPERS ===
 const mapTo = (obj) => {

@@ -149,19 +149,8 @@ export default function AuthCallback() {
           return
         }
 
-        // ─── 4. Perfil invited → completar registro ──────────────────────────
-        if (profile && profile.status === 'invited') {
-          localStorage.setItem('fd_pending_session', JSON.stringify({
-            userId: uid,
-            email: email,
-            accessToken: session.access_token,
-            existingProfileId: profile.id
-          }))
-          window.location.replace('/register?supaInvite=true')
-          return
-        }
+        // ─── 4. Sin perfil → nuevo usuario Google → completar onboarding ─────
 
-        // ─── 5. Sin perfil → nuevo usuario Google → completar perfil ─────────
         setStatus('Configurando tu nueva cuenta...')
         localStorage.setItem('fd_pending_session', JSON.stringify({
           userId: uid,
