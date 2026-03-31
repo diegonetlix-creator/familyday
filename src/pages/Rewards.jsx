@@ -17,7 +17,7 @@ const CAT_LABELS = {
   otros: 'Otros' 
 }
 
-function RewardFormModal({ reward, onSave, onClose }) {
+function RewardFormModal({ reward, members, onSave, onClose }) {
   const [form, setForm] = useState({
     title:       reward?.title       || '',
     description: reward?.description || '',
@@ -25,13 +25,16 @@ function RewardFormModal({ reward, onSave, onClose }) {
     category:    reward?.category    || 'otros',
     stock:       reward?.stock       ?? -1,
     is_active:   reward?.is_active   ?? true,
+    assigned_to: reward?.assigned_to || '',
   })
   const [saving, setSaving] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   const handleSubmit = async e => {
     e.preventDefault()
-    setSaving(true); await onSave(form); setSaving(false)
+    setSaving(true);
+    await onSave({ ...form, assigned_to: form.assigned_to || null });
+    setSaving(false)
   }
 
   return (
@@ -74,12 +77,19 @@ function RewardFormModal({ reward, onSave, onClose }) {
                 <label className="form-label">Stock (-1 = ilimitado)</label>
                 <input className="form-input" type="number" min="-1" value={form.stock} onChange={e => set('stock', parseInt(e.target.value))} />
               </div>
-              <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
-                  <input type="checkbox" checked={form.is_active} onChange={e => set('is_active', e.target.checked)} style={{ width: 16, height: 16, accentColor: 'var(--purple-500)' }} />
-                  Premio activo
-                </label>
+              <div>
+                <label className="form-label">¿Para quién?</label>
+                <select className="form-input" value={form.assigned_to || ''} onChange={e => set('assigned_to', e.target.value || null)}>
+                  <option value="">Para todos</option>
+                  {members?.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
               </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', paddingBottom: 2 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                <input type="checkbox" checked={form.is_active} onChange={e => set('is_active', e.target.checked)} style={{ width: 16, height: 16, accentColor: 'var(--purple-500)' }} />
+                Premio activo
+              </label>
             </div>
           </div>
           <div className="modal-footer">
@@ -95,7 +105,7 @@ function RewardFormModal({ reward, onSave, onClose }) {
 function RedeemModal({ reward, members, onRedeem, onClose }) {
   const [memberId, setMemberId] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const children = members.filter(m => m.role === 'child')
+  const children = members.filter(m => m.role === 'child').filter(m => !reward.assigned_to || m.id === reward.assigned_to)
   const selected = members.find(m => m.id === memberId)
   const available = selected ? (selected.total_points || 0) - (selected.redeemed_points || 0) : 0
   const canAfford = available >= reward.points_cost
@@ -249,6 +259,7 @@ export default function Rewards() {
   }
 
   const activeRewards = rewards.filter(r => r.is_active)
+  const visibleRewards = rewards.filter(r => isAdmin || !r.assigned_to || r.assigned_to === user.id)
 
   return (
     <div className="anim-fade-in">
@@ -285,7 +296,7 @@ export default function Rewards() {
       </div>
 
       {loading ? <div className="loading-wrap"><div className="spinner" /></div> : tab === 'rewards' ? (
-        rewards.length === 0 ? (
+        visibleRewards.length === 0 ? (
           <div className="empty-state">
             <span className="empty-icon">🎁</span>
             <span className="empty-title">Sin premios aún</span>
@@ -298,13 +309,18 @@ export default function Rewards() {
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
-            {rewards.map(r => (
+            {visibleRewards.map(r => (
               <div key={r.id} className={`reward-card${!r.is_active || r.stock === 0 ? ' locked' : ''}`}>
                 <div className="reward-banner" style={{ background: REWARD_CATEGORY_BG[r.category] || '#f3f4f6' }}>
                   {REWARD_CATEGORY_EMOJI[r.category] || '🎁'}
                 </div>
                 <div className="reward-body">
                   <div className="reward-title">{r.title}</div>
+                  {r.assigned_to && isAdmin && (
+                    <div style={{ fontSize: 11, color: 'var(--purple-600)', background: 'var(--purple-50)', padding: '2px 6px', borderRadius: 4, display: 'inline-block', marginBottom: 4, fontWeight: 600 }}>
+                      Solo para: {members.find(m => m.id === r.assigned_to)?.name || 'Desconocido'}
+                    </div>
+                  )}
                   {r.description && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8, lineHeight: 1.4 }}>{r.description}</div>}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12 }}>
                     <div>
@@ -411,7 +427,7 @@ export default function Rewards() {
         </div>
       )}
 
-      {showForm && <RewardFormModal reward={editing} onSave={handleSave} onClose={() => { setShowForm(false); setEditing(null) }} />}
+      {showForm && <RewardFormModal reward={editing} members={members.filter(m => m.role === 'child')} onSave={handleSave} onClose={() => { setShowForm(false); setEditing(null) }} />}
       {redeeming && <RedeemModal reward={redeeming} members={members} onRedeem={handleRedeem} onClose={() => setRedeeming(null)} />}
     </div>
   )

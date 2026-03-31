@@ -41,9 +41,9 @@ export default function CompleteProfile() {
     setLoading(true)
 
     try {
-      // Crear el perfil en fd_members usando el token de la sesión pendiente
-      const res = await fetch(`${API_URL}/fd_members`, {
-        method: 'POST',
+      // Primero intentamos actualizar (el trigger de supabase ya pudo haber creado el perfil con status='invited')
+      let res = await fetch(`${API_URL}/fd_members?id=eq.${pendingSession.userId}`, {
+        method: 'PATCH',
         headers: {
           'apikey': API_KEY,
           'Authorization': `Bearer ${pendingSession.accessToken}`,
@@ -51,28 +51,46 @@ export default function CompleteProfile() {
           'Prefer': 'return=representation'
         },
         body: JSON.stringify({
-          id: pendingSession.userId,
           name: form.name.trim(),
           age: parseInt(form.age),
           role: form.role,
           color: form.color,
-          email: pendingSession.email,
-          status: 'active',
-          total_points: 0,
-          redeemed_points: 0,
-          family_id: null // Sin familia aún (el admin creará una o se unirá a una)
+          status: 'active'
         })
       })
 
-      if (!res.ok) {
-        const txt = await res.text()
-        throw new Error(txt)
+      if (!res.ok) throw new Error(await res.text())
+      let arr = await res.json()
+
+      // Si no actualizó nada (el perfil no existía), hacemos POST
+      if (!arr || arr.length === 0) {
+        res = await fetch(`${API_URL}/fd_members`, {
+          method: 'POST',
+          headers: {
+            'apikey': API_KEY,
+            'Authorization': `Bearer ${pendingSession.accessToken}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify({
+            id: pendingSession.userId,
+            name: form.name.trim(),
+            age: parseInt(form.age),
+            role: form.role,
+            color: form.color,
+            email: pendingSession.email,
+            status: 'active',
+            total_points: 0,
+            redeemed_points: 0,
+            family_id: form.role === 'child' ? null : crypto.randomUUID()
+          })
+        })
+        if (!res.ok) throw new Error(await res.text())
+        arr = await res.json()
       }
 
-      const arr = await res.json()
       const member = arr[0]
-
-      if (!member) throw new Error('No se pudo crear el perfil')
+      if (!member) throw new Error('No se pudo configurar el perfil')
 
       // Guardar sesión completa
       localStorage.setItem('fd_session', JSON.stringify({
