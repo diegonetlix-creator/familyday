@@ -152,52 +152,111 @@ export default function SuperAdminDashboard() {
                 <span className="card-title">👥 Usuarios Registrados</span>
                 <span className="chip chip-gray">{users.length} total</span>
               </div>
-              <div className="card-body" style={{ padding: 0, overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
-                  <thead style={{ background: 'var(--gray-50)', borderBottom: '1px solid var(--gray-100)' }}>
-                    <tr>
-                      <th style={{ padding: '12px 20px', fontWeight: 800, color: 'var(--text-muted)' }}>Usuario</th>
-                      <th style={{ padding: '12px 20px', fontWeight: 800, color: 'var(--text-muted)' }}>Rol</th>
-                      <th style={{ padding: '12px 20px', fontWeight: 800, color: 'var(--text-muted)' }}>Estado</th>
-                      <th style={{ padding: '12px 20px', fontWeight: 800, color: 'var(--text-muted)' }}>Familia</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.length === 0 ? (
-                      <tr><td colSpan="4" style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No hay usuarios registrados</td></tr>
-                    ) : users.map(u => (
-                      <tr key={u.id} style={{ borderBottom: '1px solid var(--gray-50)' }}>
-                        <td style={{ padding: '12px 20px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: u.color || 'var(--purple-500)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12 }}>
-                              {u.name?.[0]?.toUpperCase()}
-                            </div>
-                            <div>
-                              <div style={{ fontWeight: 800 }}>{u.name}</div>
-                              <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                <Mail size={10} /> {u.email}
+              {(() => {
+                const familiesMap = {}
+                const superadmins = []
+                const unassigned = []
+
+                users.forEach(u => {
+                  if (u.role === 'superadmin') {
+                    superadmins.push(u)
+                  } else if (!u.family_id) {
+                    unassigned.push(u)
+                  } else {
+                    if (!familiesMap[u.family_id]) familiesMap[u.family_id] = []
+                    familiesMap[u.family_id].push(u)
+                  }
+                })
+
+                const familiesList = Object.entries(familiesMap).map(([id, members]) => {
+                  const admin = members.find(m => m.role === 'admin')
+                  return { id, members: members.sort((a, b) => a.role === 'admin' ? -1 : 1), admin }
+                })
+
+                const renderUserRow = u => (
+                  <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'white', borderRadius: 8, border: '1px solid var(--gray-100)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: u.color || 'var(--purple-500)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 11 }}>
+                        {u.name?.[0]?.toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {u.name}
+                          {u.plan === 'premium' && <span style={{ fontSize: 10, background: 'var(--amber-100)', color: 'var(--amber-700)', padding: '2px 6px', borderRadius: 4, fontWeight: 800 }}>PRO</span>}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{u.email}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span className={`chip chip-${u.role === 'admin' ? 'purple' : u.role === 'superadmin' ? 'red' : 'blue'}`} style={{ fontSize: 10 }}>
+                        {u.role === 'admin' ? 'Padre/Madre' : u.role === 'superadmin' ? 'SuperAdmin' : 'Hijo/a'}
+                      </span>
+                      <span className={`chip chip-${u.status === 'active' ? 'green' : 'amber'}`} style={{ fontSize: 10 }}>
+                        {u.status === 'active' ? 'Activo' : 'Invitado'}
+                      </span>
+                    </div>
+                  </div>
+                )
+
+                return (
+                  <div className="card-body" style={{ padding: 20, maxHeight: '600px', overflowY: 'auto' }}>
+                    {familiesList.length === 0 && superadmins.length === 0 && unassigned.length === 0 ? (
+                      <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No hay usuarios registrados</div>
+                    ) : (
+                      <>
+                        {familiesList.map(fam => {
+                          const isPremium = fam.admin?.plan === 'premium' || fam.members.some(m => m.plan === 'premium')
+                          return (
+                            <div key={fam.id} style={{ marginBottom: 24, padding: 16, border: '1px solid var(--gray-200)', borderRadius: 12, background: 'var(--gray-50)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+                                <div>
+                                  <div style={{ fontSize: 16, fontWeight: 800 }}>Familia de {fam.admin?.name || 'Desconocido'}</div>
+                                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>ID: {fam.id}</div>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <span className={`chip chip-${isPremium ? 'purple' : 'gray'}`} style={{ fontWeight: 800, fontSize: 12 }}>
+                                    {isPremium ? '💎 Premium' : '🌱 Gratuito'}
+                                  </span>
+                                  {isPremium && (
+                                    <span style={{ fontSize: 11, color: 'var(--purple-600)', background: 'var(--purple-100)', padding: '2px 8px', borderRadius: 10, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                      <Bot size={12} /> Hijos con Teacher AI
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div style={{ display: 'grid', gap: 8 }}>
+                                {fam.members.map(renderUserRow)}
                               </div>
                             </div>
+                          )
+                        })}
+
+                        {superadmins.length > 0 && (
+                          <div style={{ marginBottom: 24 }}>
+                            <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <ShieldCheck size={16} color="var(--red-500)" /> SuperAdministradores
+                            </h3>
+                            <div style={{ display: 'grid', gap: 8 }}>
+                              {superadmins.map(renderUserRow)}
+                            </div>
                           </div>
-                        </td>
-                        <td style={{ padding: '12px 20px' }}>
-                          <span className={`chip chip-${u.role === 'admin' ? 'purple' : u.role === 'superadmin' ? 'red' : 'blue'}`} style={{ fontSize: 10 }}>
-                            {u.role === 'admin' ? 'Padre/Madre' : u.role === 'superadmin' ? 'SuperAdmin' : 'Hijo/a'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 20px' }}>
-                          <span className={`chip chip-${u.status === 'active' ? 'green' : 'amber'}`} style={{ fontSize: 10 }}>
-                            {u.status === 'active' ? 'Activo' : 'Invitado'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 20px', color: 'var(--text-muted)', fontSize: 11, fontFamily: 'monospace' }}>
-                          {u.family_id?.split('-')[0]}...
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        )}
+
+                        {unassigned.length > 0 && (
+                          <div style={{ marginBottom: 24 }}>
+                            <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <Users size={16} color="var(--gray-500)" /> Sin Familia Asignada
+                            </h3>
+                            <div style={{ display: 'grid', gap: 8 }}>
+                              {unassigned.map(renderUserRow)}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )
+              })()}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
