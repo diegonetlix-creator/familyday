@@ -88,7 +88,7 @@ export default function Layout() {
       {/* Logo */}
       <div className="sidebar-logo">
         <div className="sidebar-logo-mark">
-          <img src="/logo home-day.png" alt="Home Day Logo" className="logo-icon" style={{ width: 32, height: 32, objectFit: 'contain', background: 'transparent', border: 'none', boxShadow: 'none' }} />
+          <img src="/logo home-day.jpeg" alt="Home Day Logo" className="logo-icon" style={{ width: 32, height: 32, objectFit: 'contain', background: 'transparent', border: 'none', boxShadow: 'none' }} />
           <div>
             <div className="logo-name">Home Day</div>
             <div className="logo-sub">Tareas con Premios</div>
@@ -187,7 +187,7 @@ export default function Layout() {
       {/* Mobile header */}
       <div className="mobile-header">
         <div className="sidebar-logo-mark">
-          <img src="/logo home-day.png" alt="Home Day Logo" className="logo-icon" style={{ width: 30, height: 30, objectFit: 'contain', background: 'transparent', border: 'none', boxShadow: 'none' }} />
+          <img src="/logo home-day.jpeg" alt="Home Day Logo" className="logo-icon" style={{ width: 30, height: 30, objectFit: 'contain', background: 'transparent', border: 'none', boxShadow: 'none' }} />
           <span className="logo-name" style={{ fontSize: 16 }}>Home Day</span>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
