@@ -88,9 +88,9 @@ export default function Layout() {
       {/* Logo */}
       <div className="sidebar-logo">
         <div className="sidebar-logo-mark">
-          <div className="logo-icon">🏠</div>
+          <img src="/logo home-day.png" alt="Home Day Logo" className="logo-icon" style={{ width: 32, height: 32, objectFit: 'contain', background: 'transparent', border: 'none', boxShadow: 'none' }} />
           <div>
-            <div className="logo-name">Family Day</div>
+            <div className="logo-name">Home Day</div>
             <div className="logo-sub">Tareas con Premios</div>
           </div>
         </div>
@@ -169,7 +169,7 @@ export default function Layout() {
       </button>
 
       <div style={{ padding: '8px 12px', borderTop: '1px solid rgba(255,255,255,.06)' }}>
-        <div className="sidebar-footer" style={{ border: 'none', padding: 0, margin: 0 }}>Family Day v1.0</div>
+        <div className="sidebar-footer" style={{ border: 'none', padding: 0, margin: 0 }}>Home Day v1.0</div>
       </div>
     </>
   )
@@ -187,8 +187,8 @@ export default function Layout() {
       {/* Mobile header */}
       <div className="mobile-header">
         <div className="sidebar-logo-mark">
-          <div className="logo-icon" style={{ width: 30, height: 30, fontSize: 16 }}>🏠</div>
-          <span className="logo-name" style={{ fontSize: 16 }}>Family Day</span>
+          <img src="/logo home-day.png" alt="Home Day Logo" className="logo-icon" style={{ width: 30, height: 30, objectFit: 'contain', background: 'transparent', border: 'none', boxShadow: 'none' }} />
+          <span className="logo-name" style={{ fontSize: 16 }}>Home Day</span>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <button className="mobile-menu-btn" onClick={() => setOpen(!open)}>

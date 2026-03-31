@@ -97,7 +97,7 @@ function LinkMemberModal({ onClose, onSuccess, currentFamilyId, existingMemberEm
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
           <div style={{ background: 'var(--purple-50)', border: '1px solid var(--purple-200)', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: 'var(--purple-700)', lineHeight: 1.6 }}>
-            💡 El miembro debe estar <strong>registrado previamente</strong> en Family Day. Ingresa su email para buscarlo y vincularlo a tu familia.
+            💡 El miembro debe estar <strong>registrado previamente</strong> en Home Day. Ingresa su email para buscarlo y vincularlo a tu familia.
           </div>
 
           {/* Search form */}
@@ -188,7 +188,7 @@ function LinkMemberModal({ onClose, onSuccess, currentFamilyId, existingMemberEm
                   No encontramos ninguna cuenta con el email <strong style={{ color: 'var(--text-primary)' }}>{email.trim()}</strong>.
                 </p>
                 <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                  Pídele a esa persona que se registre primero en Family Day en{' '}
+                  Pídele a esa persona que se registre primero en Home Day en{' '}
                   <strong style={{ color: 'var(--purple-600)' }}>/register</strong>. Una vez registrado,
                   vuelve aquí y vincúlalo a tu familia.
                 </p>

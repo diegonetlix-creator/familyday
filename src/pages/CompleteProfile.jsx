@@ -110,7 +110,7 @@ export default function CompleteProfile() {
             ¡Casi listo!
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
-            Completemos tu perfil para Family Day
+            Completemos tu perfil para Home Day
           </p>
           <div style={{ display: 'inline-block', marginTop: 10, background: 'var(--purple-50)', color: 'var(--purple-700)', padding: '4px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700 }}>
             {pendingSession.email}
@@ -202,7 +202,7 @@ export default function CompleteProfile() {
           </div>
 
           <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}>
-            {loading ? <><div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Guardando...</> : 'Entrar a Family Day 🎉'}
+            {loading ? <><div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Guardando...</> : 'Entrar a Home Day 🎉'}
           </button>
         </form>
       </div>

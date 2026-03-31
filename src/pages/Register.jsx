@@ -153,13 +153,9 @@ export default function Register() {
         `}</style>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            width: 56, height: 56, background: 'linear-gradient(135deg, var(--purple-400), var(--pink-500))',
-            borderRadius: 'var(--r-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 28, boxShadow: 'var(--shadow-purple)'
-          }}>🏠</div>
+          <img src="/logo home-day.png" alt="Home Day Logo" style={{ width: 56, height: 56, objectFit: 'contain' }} />
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'white', lineHeight: 1.1 }}>Family Day</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'white', lineHeight: 1.1 }}>Home Day</div>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)' }}>Tareas con Premios</div>
           </div>
         </div>
