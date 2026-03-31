@@ -141,6 +141,7 @@ export default function Layout() {
       <nav className="sidebar-nav">
         {navItems.map(({ to, icon: Icon, label, badge }) => {
           if (currentRole !== 'superadmin' && (to === '/tasks' || to === '/review' || to === '/members') && currentRole !== 'admin') return null;
+          if (currentRole === 'admin' && to === '/my-tasks') return null;
           return (
             <NavLink key={to} to={to} className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
               <Icon className="nav-icon" size={18} />

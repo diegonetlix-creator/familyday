@@ -115,35 +115,42 @@ export default function SuperAdminDashboard() {
         <div className="loading-wrap"><div className="spinner" /></div>
       ) : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 32 }}>
-            <StatCard 
-              title="Total Usuarios" 
-              value={stats.totalUsers} 
-              icon={Users} 
-              color="#4f46e5" 
-              bg="#e0e7ff" 
-            />
-            <StatCard 
-              title="Familias" 
-              value={familiesCount} 
-              icon={Home} 
-              color="#0ea5e9" 
-              bg="#e0f2fe" 
-            />
-            <StatCard 
-              title="Tareas Globales" 
-              value={stats.totalTasks} 
-              icon={ClipboardList} 
-              color="#f59e0b" 
-              bg="#fef3c7" 
-            />
-            <StatCard 
-              title="Aprobaciones" 
-              value={stats.totalRewardsDelivered} 
-              icon={ShieldCheck} 
-              color="#10b981" 
-              bg="#d1fae5" 
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 32 }}>
+            <div className="card" style={{ padding: 16 }}>
+               <h3 style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}><Users size={14}/> Usuarios y Familias</h3>
+               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}><span style={{ fontSize: 13 }}>Total Registrados</span> <b style={{ fontSize: 14 }}>{stats.totalUsers}</b></div>
+               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}><span style={{ fontSize: 13 }}>Familias Activas</span> <b style={{ fontSize: 14 }}>{familiesCount}</b></div>
+               <div style={{ height: 1, background: 'var(--gray-100)', margin: '8px 0' }} />
+               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}><span style={{ fontSize: 12, color: 'var(--purple-600)' }}>Padres/Madres</span> <b style={{ fontSize: 13 }}>{stats.totalAdmins}</b></div>
+               <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: 12, color: 'var(--blue-600)' }}>Hijos/as</span> <b style={{ fontSize: 13 }}>{stats.totalChildren}</b></div>
+            </div>
+
+            <div className="card" style={{ padding: 16 }}>
+               <h3 style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}><ClipboardList size={14}/> Tareas Globales</h3>
+               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}><span style={{ fontSize: 13 }}>Total Creadas</span> <b style={{ fontSize: 14 }}>{stats.totalTasks}</b></div>
+               <div style={{ height: 1, background: 'var(--gray-100)', margin: '8px 0' }} />
+               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}><span style={{ fontSize: 13, color: 'var(--green-600)', display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }}/> Activas</span> <b>{stats.activeTasks}</b></div>
+               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}><span style={{ fontSize: 13, color: 'var(--amber-600)', display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }}/> Inactivas</span> <b>{stats.inactiveTasks}</b></div>
+            </div>
+
+            <div className="card" style={{ padding: 16 }}>
+               <h3 style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}><ShieldCheck size={14}/> Estado de Revisiones</h3>
+               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}><span style={{ fontSize: 13, color: 'var(--amber-600)' }}>Pendientes</span> <b style={{ fontSize: 14 }}>{stats.pendingCompletions}</b></div>
+               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}><span style={{ fontSize: 13, color: 'var(--green-600)' }}>Aprobadas</span> <b style={{ fontSize: 14 }}>{stats.approvedCompletions}</b></div>
+               <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: 13, color: 'var(--red-600)' }}>Rechazadas</span> <b style={{ fontSize: 14 }}>{stats.rejectedCompletions}</b></div>
+            </div>
+
+            <div className="card" style={{ padding: 16 }}>
+               <h3 style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}><Gift size={14}/> Premios en Sistema</h3>
+               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}><span style={{ fontSize: 13 }}>Premios Creados</span> <b style={{ fontSize: 14 }}>{stats.totalRewards}</b></div>
+               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}><span style={{ fontSize: 13, color: 'var(--indigo-600)' }}>Premios Entregados</span> <b style={{ fontSize: 14 }}>{stats.rewardsRedeemed}</b></div>
+            </div>
+
+            <div className="card" style={{ padding: 16, background: 'linear-gradient(135deg, var(--purple-50), white)', border: '1px solid var(--purple-100)' }}>
+               <h3 style={{ fontSize: 12, fontWeight: 800, color: 'var(--purple-800)', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}><Bot size={14}/> Uso de Teacher AI</h3>
+               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}><span style={{ fontSize: 13, color: 'var(--purple-700)' }}>Hijos con acceso</span> <b style={{ fontSize: 14, color: 'var(--purple-900)' }}>{stats.premiumChildrenCount}</b></div>
+               <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: 13, color: 'var(--purple-700)' }}>Peticiones Totales</span> <b style={{ fontSize: 14, color: 'var(--purple-900)' }}>{stats.aiUsageCount}</b></div>
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, alignItems: 'start' }}>
