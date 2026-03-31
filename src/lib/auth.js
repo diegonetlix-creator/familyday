@@ -73,6 +73,7 @@ function buildSession(profile, accessToken) {
     email: profile.email,
     color: profile.color,
     family_id: profile.family_id,
+    plan: profile.plan,
     accessToken
   }
 }

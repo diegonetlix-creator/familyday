@@ -83,6 +83,7 @@ export default function CompleteProfile() {
         email: member.email,
         color: member.color,
         family_id: member.family_id,
+        plan: member.plan || 'free',
         accessToken: pendingSession.accessToken
       }))
       localStorage.removeItem('fd_pending_session')
