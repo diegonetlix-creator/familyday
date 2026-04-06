@@ -288,7 +288,7 @@ export const Auth = {
       if (!current?.family_id) return []
 
       const res = await fetch(`${API_URL}/fd_notifications?from_family_id=eq.${current.family_id}&type=eq.family_invite&status=in.(unread,pending)`, {
-        headers: userHeaders(current.token)
+        headers: userHeaders(current.accessToken)
       })
       if (!res.ok) return []
       return await res.json()
@@ -307,7 +307,7 @@ export const Auth = {
 
       const res = await fetch(`${RPC_URL}/get_my_pending_invites`, {
         method: 'POST',
-        headers: userHeaders(current.token),
+        headers: userHeaders(current.accessToken),
         body: JSON.stringify({})
       })
       if (!res.ok) return []
@@ -330,7 +330,7 @@ export const Auth = {
       
       const res = await fetch(`${RPC_URL}/respond_to_family_invite`, {
         method: 'POST',
-        headers: userHeaders(current.token),
+        headers: userHeaders(current.accessToken),
         body: JSON.stringify({
           p_notification_id: notificationId,
           p_accept:          accept

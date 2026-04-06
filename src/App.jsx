@@ -22,12 +22,23 @@ export default function App() {
   useEffect(() => {
     // Solo manejar sign out y refresco de token para sesiones email/password
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        const stored = localStorage.getItem('fd_session')
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored)
+            if (parsed.accessToken !== session.access_token) {
+              parsed.accessToken = session.access_token
+              localStorage.setItem('fd_session', JSON.stringify(parsed))
+            }
+          } catch (e) {}
+        }
+      }
+
       if (event === 'SIGNED_OUT') {
         localStorage.removeItem('fd_session')
         localStorage.removeItem('fd_pending_session')
       }
-      // Para Google OAuth, el manejo completo está en /auth/callback
-      // Para email/password el Login.jsx maneja la sesión directamente
     })
     return () => authListener.subscription.unsubscribe()
   }, [])

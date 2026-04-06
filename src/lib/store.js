@@ -1,4 +1,4 @@
-
+import { supabase } from './supabase.js'
 
 // === CONSTANTS ===
 export const MEMBER_COLORS = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#a855f7', '#ec4899']
@@ -39,16 +39,37 @@ const API_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://gfqpafvwlgmswthnm
 const API_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 const SERVICE_KEY = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || ''
 
-const getHeaders = (useService = false) => {
+const getHeaders = async (useService = false) => {
   const key = (useService && SERVICE_KEY) ? SERVICE_KEY : null
-  const sessionData = localStorage.getItem('fd_session')
   let token = key || API_KEY
 
-  if (!key && sessionData) {
-    try {
-      const { accessToken } = JSON.parse(sessionData)
-      if (accessToken) token = accessToken
-    } catch (e) {}
+  if (!key) {
+    // 1. Try to get token from existing Supabase session (refreshes if needed)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.access_token) {
+      token = session.access_token
+      
+      // 2. Sync with fd_session in localStorage for backward compatibility
+      const stored = localStorage.getItem('fd_session')
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored)
+          if (parsed.accessToken !== token) {
+            parsed.accessToken = token
+            localStorage.setItem('fd_session', JSON.stringify(parsed))
+          }
+        } catch (e) {}
+      }
+    } else {
+      // 3. Fallback to localStorage if no active Supabase session
+      const sessionData = localStorage.getItem('fd_session')
+      if (sessionData) {
+        try {
+          const { accessToken } = JSON.parse(sessionData)
+          if (accessToken) token = accessToken
+        } catch (e) {}
+      }
+    }
   }
 
   return {
@@ -85,7 +106,7 @@ async function dbSelect(table, { order, limit, filters, isGlobal = false, useSer
 
   // fd_members always uses service role to bypass RLS timing issues
   const svc = useService || table === 'fd_members'
-  const res = await fetch(url, { headers: getHeaders(svc) })
+  const res = await fetch(url, { headers: await getHeaders(svc) })
   if (!res.ok) {
     console.error(`dbSelect ${table} error:`, res.status, await res.text())
     return []
@@ -106,7 +127,7 @@ async function dbInsert(table, row) {
 
   const res = await fetch(`${API_URL}/${table}`, {
     method: 'POST',
-    headers: getHeaders(false),
+    headers: await getHeaders(false),
     body: JSON.stringify(mapTo(data))
   })
   if (!res.ok) {
@@ -123,7 +144,7 @@ async function dbUpdate(table, id, data) {
   const svc = table === 'fd_members'
   const res = await fetch(`${API_URL}/${table}?id=eq.${id}`, {
     method: 'PATCH',
-    headers: getHeaders(svc),
+    headers: await getHeaders(svc),
     body: JSON.stringify(mapTo(data))
   })
   if (!res.ok) {
@@ -139,7 +160,7 @@ async function dbUpdate(table, id, data) {
 async function dbDelete(table, id) {
   const res = await fetch(`${API_URL}/${table}?id=eq.${id}`, {
     method: 'DELETE',
-    headers: getHeaders(table === 'fd_members')
+    headers: await getHeaders(table === 'fd_members')
   })
   if (!res.ok) {
     const txt = await res.text()
@@ -154,7 +175,7 @@ async function dbCount(table, filters = {}) {
     url += `&${col}=eq.${val}`
   }
   const res = await fetch(url, {
-    headers: { ...getHeaders(false), 'Prefer': 'count=exact', 'Range-Unit': 'items', 'Range': '0-0' }
+    headers: { ...await getHeaders(false), 'Prefer': 'count=exact', 'Range-Unit': 'items', 'Range': '0-0' }
   })
   const range = res.headers.get('content-range')
   if (range) {
