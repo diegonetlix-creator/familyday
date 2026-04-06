@@ -20,7 +20,10 @@ import ProtectedRoute from './components/ProtectedRoute.jsx'
 
 export default function App() {
   useEffect(() => {
-    // Solo manejar sign out y refresco de token para sesiones email/password
+    // 1. Refresh session from DB on start to keep plan/role in sync
+    Auth.refreshSession().catch(err => console.debug('Initial session refresh skipped:', err))
+
+    // 2. Handle signOut and token refresh for email/pass sessions
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         const stored = localStorage.getItem('fd_session')

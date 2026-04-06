@@ -108,7 +108,7 @@ export default function Tasks() {
           <p className="page-subtitle">Gestiona todas las tareas y sus puntos</p>
         </div>
         <button className="btn btn-primary" onClick={() => {
-          const isPremium = currentUser?.plan === 'premium' || currentUser?.role === 'superadmin'
+          const isPremium = members.some(m => m.role === 'admin' && m.plan === 'premium') || currentUser?.role === 'superadmin'
           if (!isPremium && tasks.length >= 5) {
             setToast('🏆 Plan Gratuito: Límite de 5 tareas alcanzado. Actualiza a Premium para crear tareas ilimitadas.')
             setTimeout(() => setToast(null), 4000)
@@ -156,7 +156,7 @@ export default function Tasks() {
           <span className="empty-title">No hay tareas</span>
           <span className="empty-desc">Crea la primera tarea para tu familia</span>
           <button className="btn btn-primary btn-sm" style={{ marginTop: 12 }} onClick={() => {
-            const isPremium = currentUser?.plan === 'premium' || currentUser?.role === 'superadmin'
+            const isPremium = members.some(m => m.role === 'admin' && m.plan === 'premium') || currentUser?.role === 'superadmin'
             if (!isPremium && tasks.length >= 5) {
               setToast('🏆 Límite de 5 tareas alcanzado. Actualiza a Premium.')
               setTimeout(() => setToast(null), 4000)

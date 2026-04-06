@@ -541,7 +541,7 @@ export default function Members() {
           onSuccess={handleLinkSuccess}
           currentFamilyId={currentFamilyId}
           existingMemberEmails={existingEmails}
-          isFreePlan={currentUser?.plan !== 'premium' && currentUser?.role !== 'superadmin'}
+          isFreePlan={!members.some(m => m.role === 'admin' && m.plan === 'premium') && currentUser?.role !== 'superadmin'}
           adminCount={admins.length}
           childCount={children.length}
         />
