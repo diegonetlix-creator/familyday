@@ -205,7 +205,14 @@ export default function MyTasks() {
       loadData()
     } catch (err) {
       console.error('TaskCompletion create error:', err)
-      alert('Error al guardar la tarea. Verifica tu conexión.')
+      const msg = err.message || ''
+      if (msg.includes('401') || msg.includes('403') || msg.includes('JWT') || msg.includes('token')) {
+        // Session expired — can't recover automatically
+        alert('Tu sesión ha expirado. Por favor vuelve a iniciar sesión.')
+        import('../lib/auth.js').then(({ Auth }) => Auth.logout())
+      } else {
+        alert('Error al guardar la tarea. Verifica tu conexión e inténtalo de nuevo.')
+      }
     } finally {
       setLoading(false)
     }
@@ -265,35 +272,39 @@ export default function MyTasks() {
           {filtered.map(task => {
             const recent = completions.find(c => c.task_id === task.id && new Date(c.createdAt).toDateString() === new Date().toDateString())
             return (
-              <div key={task.id} className={`task-card diff-${task.difficulty}`} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div className={`task-emoji-wrap diff-${task.difficulty}`}>{CATEGORY_EMOJI[task.category] || '📌'}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--gray-800)', marginBottom: 3 }}>{task.title}</div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <span className={`chip chip-${task.difficulty === 'facil' ? 'green' : task.difficulty === 'media' ? 'amber' : 'red'}`}>
-                      {DIFFICULTY_LABEL[task.difficulty]}
-                    </span>
-                    <span className="chip chip-gray">{FREQUENCY_LABEL[task.frequency]}</span>
-                    {task.requires_evidence && <span className="chip chip-pink">📷 Requiere foto</span>}
-                    {recent && (
-                      <span className="chip chip-green">
-                        {recent.status === 'aprobada' ? '✅ Aprobada' : recent.status === 'pendiente' ? '⏳ En revisión' : '✓ Enviada'}
+              <div key={task.id} className={`task-card diff-${task.difficulty}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
+                  <div className={`task-emoji-wrap diff-${task.difficulty}`}>{CATEGORY_EMOJI[task.category] || '📌'}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--gray-800)', marginBottom: 3 }}>{task.title}</div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <span className={`chip chip-${task.difficulty === 'facil' ? 'green' : task.difficulty === 'media' ? 'amber' : 'red'}`}>
+                        {DIFFICULTY_LABEL[task.difficulty]}
                       </span>
-                    )}
+                      <span className="chip chip-gray">{FREQUENCY_LABEL[task.frequency]}</span>
+                      {task.requires_evidence && <span className="chip chip-pink">📷 Foto</span>}
+                      {recent && (
+                        <span className="chip chip-green">
+                          {recent.status === 'aprobada' ? '✅ Aprobada' : recent.status === 'pendiente' ? '⏳ En revisión' : '✓ Enviada'}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div className="task-points">{task.base_points}</div>
-                  <div className="task-points-label">pts</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                  <div style={{ textAlign: 'right' }}>
+                    <div className="task-points">{task.base_points}</div>
+                    <div className="task-points-label">pts</div>
+                  </div>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => setSelectedTask(task)}
+                    disabled={recent?.status === 'pendiente' || recent?.status === 'aprobada'}
+                    style={recent ? { opacity: .5 } : {}}
+                  >
+                    {recent ? <CheckCircle size={15} /> : '✓ Completar'}
+                  </button>
                 </div>
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={() => setSelectedTask(task)}
-                  disabled={recent?.status === 'pendiente' || recent?.status === 'aprobada'}
-                  style={recent ? { opacity: .5 } : {}}
-                >
-                  {recent ? <CheckCircle size={15} /> : '✓ Completar'}
-                </button>
               </div>
             )
           })}

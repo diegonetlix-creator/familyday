@@ -187,14 +187,14 @@ export default function Review() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }}>
         {STATUS_OPTS.map(o => (
           <button key={o.value} onClick={() => setFilter(o.value)}
             style={{
-              padding: '8px 16px', borderRadius: 'var(--r-full)', border: '1.5px solid',
+              padding: '8px 14px', borderRadius: 'var(--r-full)', border: '1.5px solid',
               borderColor: filter === o.value ? 'var(--purple-500)' : 'var(--border)',
               background: filter === o.value ? 'var(--purple-50)' : 'transparent',
-              fontWeight: 700, fontSize: 13, cursor: 'pointer',
+              fontWeight: 700, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
               color: filter === o.value ? 'var(--purple-700)' : 'var(--text-secondary)',
             }}>
             {o.label} {o.value === 'pendiente' && pendingCount > 0 ? `(${pendingCount})` : ''}
@@ -215,36 +215,41 @@ export default function Review() {
           {filtered.map(c => {
             const m = members.find(x => x.id === c.member_id)
             return (
-              <div key={c.id} className="card card-p" style={{ display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', transition: 'box-shadow .2s' }}
+              <div key={c.id} className="card card-p" style={{ display: 'flex', flexDirection: 'column', gap: 10, cursor: 'pointer', transition: 'box-shadow .2s' }}
                 onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
                 onMouseLeave={e => e.currentTarget.style.boxShadow = ''}>
-                <div style={{ width: 42, height: 42, borderRadius: '50%', background: m?.color || 'var(--purple-500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 17, color: '#fff', flexShrink: 0, overflow: 'hidden' }}>
-                  {m?.avatar_url ? (
-                    <img src={m.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    c.member_name?.[0]?.toUpperCase()
+                {/* Top row: avatar + info */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 42, height: 42, borderRadius: '50%', background: m?.color || 'var(--purple-500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 17, color: '#fff', flexShrink: 0, overflow: 'hidden' }}>
+                    {m?.avatar_url ? (
+                      <img src={m.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      c.member_name?.[0]?.toUpperCase()
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--gray-800)' }} className="truncate">{c.task_title}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.member_name} · {new Date(c.createdAt).toLocaleDateString('es-ES')}</div>
+                  </div>
+                </div>
+                {/* Bottom row: badges + action */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  {c.evidence_images?.length > 0 && (
+                    <span className="chip chip-blue"><ImageIcon size={12} /> {c.evidence_images.length} fotos</span>
+                  )}
+                  {c.points_awarded > 0 && (
+                    <span className="chip chip-purple">+{c.points_awarded + (c.bonus_awarded||0)} pts</span>
+                  )}
+                  <span className={`status-badge ${STATUS_CLS[c.status]}`}>{STATUS_LABEL[c.status]}</span>
+                  {(c.status === 'pendiente' || c.status === 'en_revision') && (
+                    <button className="btn btn-primary btn-sm" style={{ marginLeft: 'auto' }} onClick={() => setReviewing(c)}>
+                      <Eye size={14} /> Revisar
+                    </button>
                   )}
                 </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--gray-800)' }} className="truncate">{c.task_title}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.member_name} · {new Date(c.createdAt).toLocaleDateString('es-ES')}</div>
               </div>
-              {c.evidence_images?.length > 0 && (
-                <span className="chip chip-blue"><ImageIcon size={12} /> {c.evidence_images.length} fotos</span>
-              )}
-              {c.points_awarded > 0 && (
-                <span className="chip chip-purple">+{c.points_awarded + (c.bonus_awarded||0)} pts</span>
-              )}
-              <span className={`status-badge ${STATUS_CLS[c.status]}`}>{STATUS_LABEL[c.status]}</span>
-              {(c.status === 'pendiente' || c.status === 'en_revision') && (
-                <button className="btn btn-primary btn-sm" onClick={() => setReviewing(c)}>
-                  <Eye size={14} /> Revisar
-                </button>
-              )}
-            </div>
-              )
-            })
-          }
+            )
+          })}
         </div>
       )}
 

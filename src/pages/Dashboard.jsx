@@ -79,41 +79,41 @@ export default function Dashboard() {
         <div style={{ 
           background: 'linear-gradient(135deg, var(--purple-600), var(--pink-500))', 
           borderRadius: 'var(--r-xl)', 
-          padding: '32px 24px', 
+          padding: '24px 18px', 
           color: 'white', 
-          marginBottom: 32,
+          marginBottom: 24,
           boxShadow: 'var(--shadow-purple)',
           position: 'relative',
           overflow: 'hidden'
         }}>
           <div style={{ position: 'relative', zIndex: 2 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 32, marginBottom: 8 }}>¡Hola, {user.name}! 👋</h1>
-                <p style={{ opacity: 0.9, fontSize: 16 }}>¡Tienes un gran día por delante para ganar puntos!</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h1 className="text-hero" style={{ fontFamily: 'var(--font-display)', fontSize: 28, marginBottom: 6, lineHeight: 1.2 }}>¡Hola, {user.name}! 👋</h1>
+                <p className="text-hero-sub" style={{ opacity: 0.9, fontSize: 15 }}>¡Tienes un gran día por delante!</p>
               </div>
               {isPremium ? (
-                <div style={{ background: 'rgba(255,255,255,0.2)', padding: '6px 12px', borderRadius: 99, fontSize: 12, fontWeight: 800, backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ background: 'rgba(255,255,255,0.2)', padding: '5px 10px', borderRadius: 99, fontSize: 11, fontWeight: 800, backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                   👑 Premium
                 </div>
               ) : (
-                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '6px 12px', borderRadius: 99, fontSize: 12, fontWeight: 800, backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  ⭐ Plan Gratuito
+                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '5px 10px', borderRadius: 99, fontSize: 11, fontWeight: 800, backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                  ⭐ Gratis
                 </div>
               )}
             </div>
             
-            <div style={{ marginTop: 24, background: 'rgba(255,255,255,0.15)', padding: 20, borderRadius: 'var(--r-lg)', backdropFilter: 'blur(10px)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>
-                <span style={{ fontWeight: 800, fontSize: 14 }}>Nv. {currentLevel.level} - {currentLevel.name}</span>
-                <span style={{ fontSize: 13, fontWeight: 700 }}>{levelProgress}% para Nv. {currentLevel.level + 1}</span>
+            <div style={{ marginTop: 18, background: 'rgba(255,255,255,0.15)', padding: '14px 16px', borderRadius: 'var(--r-lg)', backdropFilter: 'blur(10px)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                <span style={{ fontWeight: 800, fontSize: 13 }}>Nv. {currentLevel.level} · {currentLevel.name}</span>
+                <span style={{ fontSize: 12, fontWeight: 700 }}>{levelProgress}%</span>
               </div>
-              <div style={{ height: 12, background: 'rgba(255,255,255,0.2)', borderRadius: 99, overflow: 'hidden' }}>
-                <div style={{ width: `${levelProgress}%`, height: '100%', background: 'white', boxShadow: '0 0 15px white' }} />
+              <div style={{ height: 10, background: 'rgba(255,255,255,0.2)', borderRadius: 99, overflow: 'hidden' }}>
+                <div style={{ width: `${levelProgress}%`, height: '100%', background: 'white', boxShadow: '0 0 12px white' }} />
               </div>
             </div>
           </div>
-          <div style={{ position: 'absolute', right: -20, bottom: -20, fontSize: 120, opacity: 0.15, transform: 'rotate(-15deg)' }}>🚀</div>
+          <div style={{ position: 'absolute', right: -16, bottom: -16, fontSize: 90, opacity: 0.12, transform: 'rotate(-15deg)' }}>🚀</div>
         </div>
 
         <div className="responsive-grid">
@@ -321,7 +321,7 @@ export default function Dashboard() {
           </div>
 
           {/* Quick actions */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="quick-actions-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             {[
               { to: '/tasks',   icon: '➕', title: 'Nueva tarea', desc: 'Crear tarea del hogar', color: 'var(--purple-500)', bg: 'var(--purple-50)' },
               { to: '/rewards', icon: '🎁', title: 'Gestionar premios', desc: `${rewards.length} disponibles`, color: 'var(--pink-500)', bg: 'var(--pink-50)' },
@@ -409,7 +409,7 @@ export default function Dashboard() {
         <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
           💎 Mi Plan
         </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
           
           {/* Free Plan */}
           <div className="card" style={{ 

@@ -308,7 +308,7 @@ export default function Rewards() {
             )}
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
+          <div className="reward-grid-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
             {visibleRewards.map(r => (
               <div key={r.id} className={`reward-card${!r.is_active || r.stock === 0 ? ' locked' : ''}`}>
                 <div className="reward-banner" style={{ background: REWARD_CATEGORY_BG[r.category] || '#f3f4f6' }}>

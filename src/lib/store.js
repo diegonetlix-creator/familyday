@@ -41,15 +41,22 @@ const SERVICE_KEY = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || ''
 
 const getHeaders = async (useService = false) => {
   const key = (useService && SERVICE_KEY) ? SERVICE_KEY : null
-  let token = key || API_KEY
+  if (key) {
+    return {
+      'apikey': API_KEY,
+      'Authorization': `Bearer ${key}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    }
+  }
 
-  if (!key) {
-    // 1. Try to get token from existing Supabase session (refreshes if needed)
-    const { data: { session } } = await supabase.auth.getSession()
+  // 1. Try to get a fresh token from Supabase session (this also refreshes if near-expiry)
+  let token = API_KEY
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession()
     if (session?.access_token) {
       token = session.access_token
-      
-      // 2. Sync with fd_session in localStorage for backward compatibility
+      // Keep localStorage in sync
       const stored = localStorage.getItem('fd_session')
       if (stored) {
         try {
@@ -61,14 +68,29 @@ const getHeaders = async (useService = false) => {
         } catch (e) {}
       }
     } else {
-      // 3. Fallback to localStorage if no active Supabase session
-      const sessionData = localStorage.getItem('fd_session')
-      if (sessionData) {
-        try {
-          const { accessToken } = JSON.parse(sessionData)
-          if (accessToken) token = accessToken
-        } catch (e) {}
+      // 2. Session doesn't exist or expired – try explicit refresh
+      const { data: refreshed } = await supabase.auth.refreshSession()
+      if (refreshed?.session?.access_token) {
+        token = refreshed.session.access_token
+      } else {
+        // 3. Last resort: use stored access token from localStorage
+        const sessionData = localStorage.getItem('fd_session')
+        if (sessionData) {
+          try {
+            const { accessToken } = JSON.parse(sessionData)
+            if (accessToken) token = accessToken
+          } catch (e) {}
+        }
       }
+    }
+  } catch (e) {
+    // Network error – try localStorage
+    const sessionData = localStorage.getItem('fd_session')
+    if (sessionData) {
+      try {
+        const { accessToken } = JSON.parse(sessionData)
+        if (accessToken) token = accessToken
+      } catch (e2) {}
     }
   }
 
@@ -115,12 +137,12 @@ async function dbSelect(table, { order, limit, filters, isGlobal = false, useSer
 }
 
 // INSERT a row
-async function dbInsert(table, row) {
+async function dbInsert(table, row, retry = true) {
   const session = JSON.parse(localStorage.getItem('fd_session') || '{}')
   const familyId = session.family_id
 
   if (!familyId && table !== 'fd_members') {
-    console.error(`dbInsert ${table}: missing family_id in session`)
+    console.warn(`dbInsert ${table}: missing family_id in session – will rely on RLS`)
   }
 
   const data = familyId ? { ...row, family_id: familyId } : row
@@ -130,27 +152,71 @@ async function dbInsert(table, row) {
     headers: await getHeaders(false),
     body: JSON.stringify(mapTo(data))
   })
+
+  // On 401/403, refresh the session and retry once
+  if ((res.status === 401 || res.status === 403) && retry) {
+    console.warn(`dbInsert ${table}: got ${res.status}, attempting session refresh and retry`)
+    try {
+      const { data: refreshed } = await supabase.auth.refreshSession()
+      if (refreshed?.session?.access_token) {
+        // Update localStorage with new token
+        const stored = localStorage.getItem('fd_session')
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored)
+            parsed.accessToken = refreshed.session.access_token
+            localStorage.setItem('fd_session', JSON.stringify(parsed))
+          } catch (_) {}
+        }
+        return dbInsert(table, row, false) // retry once
+      }
+    } catch (refreshErr) {
+      console.error('Session refresh failed:', refreshErr)
+    }
+  }
+
   if (!res.ok) {
     const txt = await res.text()
     console.error(`dbInsert ${table} error:`, res.status, txt)
-    throw new Error(`Insert failed: ${txt}`)
+    throw new Error(`Insert failed (${res.status}): ${txt}`)
   }
   const arr = await res.json()
   return mapFrom(arr[0])
 }
 
 // UPDATE a row by id — uses service role for fd_members to bypass RLS
-async function dbUpdate(table, id, data) {
+async function dbUpdate(table, id, data, retry = true) {
   const svc = table === 'fd_members'
   const res = await fetch(`${API_URL}/${table}?id=eq.${id}`, {
     method: 'PATCH',
     headers: await getHeaders(svc),
     body: JSON.stringify(mapTo(data))
   })
+
+  if ((res.status === 401 || res.status === 403) && retry && !svc) {
+    console.warn(`dbUpdate ${table}: got ${res.status}, attempting refresh and retry`)
+    try {
+      const { data: refreshed } = await supabase.auth.refreshSession()
+      if (refreshed?.session?.access_token) {
+        const stored = localStorage.getItem('fd_session')
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored)
+            parsed.accessToken = refreshed.session.access_token
+            localStorage.setItem('fd_session', JSON.stringify(parsed))
+          } catch (_) {}
+        }
+        return dbUpdate(table, id, data, false)
+      }
+    } catch (refreshErr) {
+      console.error('Session refresh failed:', refreshErr)
+    }
+  }
+
   if (!res.ok) {
     const txt = await res.text()
     console.error(`dbUpdate ${table} error:`, res.status, txt)
-    throw new Error(`Update failed: ${txt}`)
+    throw new Error(`Update failed (${res.status}): ${txt}`)
   }
   const arr = await res.json()
   return mapFrom(arr[0])

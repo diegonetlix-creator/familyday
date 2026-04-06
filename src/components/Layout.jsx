@@ -34,19 +34,12 @@ export default function Layout() {
 
   const loadData = async () => {
     try {
-      // Usar datos de sesion local para respuesta inmediata en UI
       if (currentUser) setMember(currentUser)
-
-      // Carga paralela optimizada
       const [members, pending] = await Promise.all([FamilyMember.list(), TaskCompletion.countPending()])
-      
       const activeMember = currentUser ? (members.find(m => m.id === (currentUser.userId || currentUser.id)) || currentUser) : (members[0] || currentUser)
       setMember(activeMember)
       setPendingCount(pending)
-
-      // Detect stale session family_id
       if (currentUser && activeMember && currentUser.family_id !== activeMember.family_id) {
-        // Family changed in DB, sync local session
         await Auth.refreshSession()
         window.location.reload()
       }
@@ -61,31 +54,44 @@ export default function Layout() {
   }
 
   const levelInfo = member ? getLevelInfo(member.total_points || 0) : null
-
   const currentRole = member?.role || currentUser?.role
-  
   const isPremium = member?.plan === 'premium' || currentRole === 'superadmin'
 
   const navItems = currentRole === 'superadmin' ? [
-    { to: '/superadmin',  icon: Trophy,           label: 'Panel SuperAdmin' },
-    { to: '/settings',    icon: Settings,         label: 'Ajustes' },
+    { to: '/superadmin',  icon: Trophy,          label: 'Panel SuperAdmin' },
+    { to: '/settings',    icon: Settings,        label: 'Ajustes' },
   ] : [
     { to: '/dashboard',   icon: LayoutDashboard, label: 'Inicio' },
     { to: '/tasks',       icon: ClipboardList,   label: 'Tareas' },
-    { to: '/my-tasks',    icon: CheckSquare,      label: 'Mis Tareas' },
-    { to: '/members',     icon: Users,            label: 'Familia' },
-    { to: '/review',      icon: Star,             label: 'Revisar', badge: pendingCount },
-    { to: '/rewards',     icon: Gift,             label: 'Premios' },
-    { to: '/leaderboard', icon: Trophy,           label: 'Ranking' },
+    { to: '/my-tasks',    icon: CheckSquare,     label: 'Mis Tareas' },
+    { to: '/members',     icon: Users,           label: 'Familia' },
+    { to: '/review',      icon: Star,            label: 'Revisar', badge: pendingCount },
+    { to: '/rewards',     icon: Gift,            label: 'Premios' },
+    { to: '/leaderboard', icon: Trophy,          label: 'Ranking' },
     ...(isPremium ? [
-      { to: '/teacher',     icon: Bot,              label: 'Teacher IA' },
-      { to: '/settings',    icon: Settings,         label: 'Ajustes' }
+      { to: '/teacher',   icon: Bot,             label: 'Teacher IA' },
+      { to: '/settings',  icon: Settings,        label: 'Ajustes' }
     ] : [])
+  ]
+
+  const bottomNavItems = currentRole === 'superadmin' ? [
+    { to: '/superadmin', icon: Trophy,           label: 'Panel' },
+    { to: '/settings',   icon: Settings,         label: 'Ajustes' },
+  ] : currentRole === 'child' ? [
+    { to: '/dashboard',  icon: LayoutDashboard,  label: 'Inicio' },
+    { to: '/my-tasks',   icon: CheckSquare,      label: 'Mis Tareas' },
+    { to: '/rewards',    icon: Gift,             label: 'Premios' },
+    { to: '/leaderboard',icon: Trophy,           label: 'Ranking' },
+  ] : [
+    { to: '/dashboard',  icon: LayoutDashboard,  label: 'Inicio' },
+    { to: '/tasks',      icon: ClipboardList,    label: 'Tareas' },
+    { to: '/review',     icon: Star,             label: 'Revisar', badge: pendingCount },
+    { to: '/rewards',    icon: Gift,             label: 'Premios' },
+    { to: '/members',    icon: Users,            label: 'Familia' },
   ]
 
   const SidebarContent = () => (
     <>
-      {/* Logo */}
       <div className="sidebar-logo">
         <div className="sidebar-logo-mark">
           <img src="/logo home-day.jpeg" alt="Home Day Logo" className="logo-icon" style={{ width: 32, height: 32, objectFit: 'contain', background: 'transparent', border: 'none', boxShadow: 'none' }} />
@@ -96,7 +102,6 @@ export default function Layout() {
         </div>
       </div>
 
-      {/* User */}
       {member && levelInfo && (
         <>
           <div className="sidebar-user">
@@ -104,10 +109,7 @@ export default function Layout() {
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <XpRing progress={levelInfo.progress} size={44} color={member.color || '#7c3aed'} />
               </div>
-              <div className="user-avatar" style={{
-                width: 32, height: 32, background: member.color || '#7c3aed',
-                position: 'relative', margin: '6px', overflow: 'hidden'
-              }}>
+              <div className="user-avatar" style={{ width: 32, height: 32, background: member.color || '#7c3aed', position: 'relative', margin: '6px', overflow: 'hidden' }}>
                 {member.avatar_url ? (
                   <img src={member.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
@@ -137,7 +139,6 @@ export default function Layout() {
         </>
       )}
 
-      {/* Nav */}
       <nav className="sidebar-nav">
         {navItems.map(({ to, icon: Icon, label, badge }) => {
           if (currentRole !== 'superadmin' && (to === '/tasks' || to === '/review' || to === '/members') && currentRole !== 'admin') return null;
@@ -154,14 +155,7 @@ export default function Layout() {
 
       <button
         onClick={handleLogout}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          width: '100%', padding: '12px 16px',
-          background: 'transparent', border: 'none',
-          borderTop: '1px solid rgba(255,255,255,.06)',
-          color: 'rgba(255,255,255,.45)', fontSize: 13, fontWeight: 600,
-          cursor: 'pointer', transition: 'var(--transition)',
-        }}
+        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '12px 16px', background: 'transparent', border: 'none', borderTop: '1px solid rgba(255,255,255,.06)', color: 'rgba(255,255,255,.45)', fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'var(--transition)' }}
         onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,.8)'; e.currentTarget.style.background = 'rgba(239,68,68,.15)' }}
         onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,.45)'; e.currentTarget.style.background = 'transparent' }}
       >
@@ -177,28 +171,59 @@ export default function Layout() {
 
   return (
     <div className="app-shell">
-      {/* Desktop sidebar */}
       <aside className={`sidebar${open ? ' open' : ''}`}>
         <SidebarContent />
       </aside>
 
-      {/* Mobile overlay */}
       <div className={`mobile-overlay${open ? ' open' : ''}`} onClick={() => setOpen(false)} />
 
-      {/* Mobile header */}
       <div className="mobile-header">
         <div className="sidebar-logo-mark">
-          <img src="/logo home-day.jpeg" alt="Home Day Logo" className="logo-icon" style={{ width: 30, height: 30, objectFit: 'contain', background: 'transparent', border: 'none', boxShadow: 'none' }} />
+          <img src="/logo home-day.jpeg" alt="Home Day Logo" className="logo-icon" style={{ width: 28, height: 28, objectFit: 'contain', background: 'transparent', border: 'none', boxShadow: 'none' }} />
           <span className="logo-name" style={{ fontSize: 16 }}>Home Day</span>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {member && (
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: member.color || '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, color: '#fff', overflow: 'hidden', flexShrink: 0 }}>
+              {member.avatar_url
+                ? <img src={member.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : member.name?.[0]?.toUpperCase()}
+            </div>
+          )}
           <button className="mobile-menu-btn" onClick={() => setOpen(!open)}>
             {open ? <X size={18} /> : <Menu size={18} />}
           </button>
         </div>
       </div>
 
-      {/* Main */}
+      <nav className="bottom-nav" aria-label="Navegación principal">
+        <div className="bottom-nav-inner">
+          {bottomNavItems.map(({ to, icon: Icon, label, badge }) => {
+            const isActive = location.pathname === to ||
+              (to !== '/dashboard' && to !== '/superadmin' && location.pathname.startsWith(to))
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                className={`bottom-nav-item${isActive ? ' active' : ''}`}
+              >
+                <div className="bottom-nav-icon-wrap">
+                  <Icon size={20} />
+                  {badge > 0 && <span className="bottom-nav-badge">{badge > 9 ? '9+' : badge}</span>}
+                </div>
+                <span className="bottom-nav-label">{label}</span>
+              </NavLink>
+            )
+          })}
+          <button className="bottom-nav-item" onClick={handleLogout} aria-label="Cerrar sesión">
+            <div className="bottom-nav-icon-wrap">
+              <LogOut size={20} />
+            </div>
+            <span className="bottom-nav-label">Salir</span>
+          </button>
+        </div>
+      </nav>
+
       <main className="main-content">
         <div className="page-body">
           <Outlet />
