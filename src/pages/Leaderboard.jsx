@@ -82,31 +82,31 @@ export default function Leaderboard() {
         <>
           {/* Podium — top 3 */}
           {ranked.length >= 1 && (
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 36 }}>
-              <div className="card" style={{ padding: '32px 40px', display: 'inline-block' }}>
-                <div className="podium-wrap" style={{ alignItems: 'flex-end', gap: 20 }}>
+            <div className="leaderboard-podium-section">
+              <div className="card podium-card">
+                <div className="podium-wrap">
                   {/* Reorder: 2nd | 1st | 3rd */}
                   {[ranked[1], ranked[0], ranked[2]].map((member, i) => {
-                    if (!member) return <div key={i} style={{ width: 80 }} />
+                    if (!member) return <div key={i} className="podium-spacer" />
                     const realIdx = i === 0 ? 1 : i === 1 ? 0 : 2
                     const lvl     = getLevelInfo(member.total_points || 0)
-                    const sz      = PODIUM_SIZES[realIdx]
-                    // proportional height: 1st gets full max, others proportional
+                    const sz      = realIdx === 0 ? 80 : realIdx === 1 ? 64 : 54; // Sized relative to rank
+                    
                     const propH   = Math.round((PODIUM_HEIGHTS[realIdx] * (member.total_points || 0)) / maxPts)
                     const blockH  = Math.max(realIdx === 0 ? 90 : realIdx === 1 ? 60 : 40, propH)
 
                     return (
-                      <div key={member.id} className="podium-col" style={{ gap: 6 }}>
-                        {realIdx === 0 && <span style={{ fontSize: 22, marginBottom: 2 }}>👑</span>}
+                      <div key={member.id} className={`podium-col rank-${realIdx}`} style={{ gap: 6 }}>
+                        {realIdx === 0 && <span className="crown-icon">👑</span>}
                         <XpRingPodium progress={lvl.progress} size={sz} color={member.color || 'var(--purple-500)'} label={member.name?.[0]?.toUpperCase()} avatarUrl={member.avatar_url} />
-                        <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--gray-800)', maxWidth: 90, textAlign: 'center', lineHeight: 1.2 }}>{member.name}</div>
-                        <div style={{ fontSize: 16, fontWeight: 900, color: member.color || 'var(--purple-600)' }}>{member.total_points || 0}</div>
-                        <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--gray-100)', padding: '2px 8px', borderRadius: 'var(--r-full)', fontWeight: 700 }}>
+                        <div className="podium-name">{member.name}</div>
+                        <div className="podium-points" style={{ color: member.color || 'var(--purple-600)' }}>{member.total_points || 0}</div>
+                        <span className="podium-level-badge">
                           Nv {lvl.level}
                         </span>
                         <div className="podium-block"
-                          style={{ width: realIdx === 0 ? 90 : realIdx === 1 ? 75 : 65, height: blockH, background: MEDAL_COLORS[realIdx] + '30', border: `2px solid ${MEDAL_COLORS[realIdx]}40` }}>
-                          <span style={{ fontSize: realIdx === 0 ? 28 : 22 }}>{MEDALS[realIdx]}</span>
+                          style={{ height: blockH, background: MEDAL_COLORS[realIdx] + '20', border: `2.5px solid ${MEDAL_COLORS[realIdx]}40` }}>
+                          <span className="medal-icon">{MEDALS[realIdx]}</span>
                         </div>
                       </div>
                     )
@@ -125,50 +125,38 @@ export default function Leaderboard() {
               {ranked.map((member, idx) => {
                 const stats     = getStats(member.id)
                 const lvl       = getLevelInfo(member.total_points || 0)
-                const available = (member.total_points || 0) - (member.redeemed_points || 0)
                 const rowBg     = idx === 0 ? 'rgba(239,159,39,.07)' : idx === 1 ? 'rgba(136,135,128,.05)' : idx === 2 ? 'rgba(216,90,48,.05)' : 'transparent'
                 return (
-                  <div key={member.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 20px', background: rowBg, transition: 'background .15s' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--gray-50)'}
-                    onMouseLeave={e => e.currentTarget.style.background = rowBg}>
-                    <div style={{ width: 32, textAlign: 'center', fontSize: 20, flexShrink: 0 }}>
-                      {MEDALS[idx] || <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-muted)' }}>{idx+1}</span>}
+                  <div key={member.id} className="ranking-row" style={{ background: rowBg }}>
+                    <div className="ranking-rank">
+                      {MEDALS[idx] || <span className="rank-num">{idx+1}</span>}
                     </div>
-                    <div style={{ width: 44, height: 44, borderRadius: '50%', background: member.color || 'var(--purple-500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 18, color: '#fff', flexShrink: 0, overflow: 'hidden' }}>
+                    <div className="ranking-avatar" style={{ background: member.color || 'var(--purple-500)' }}>
                       {member.avatar_url ? (
-                        <img src={member.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img src={member.avatar_url} alt={member.name} />
                       ) : (
                         member.name?.[0]?.toUpperCase()
                       )}
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 4 }}>{member.name}</div>
-                      <div style={{ width: '100%' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-muted)', marginBottom: 3 }}>
+                    <div className="ranking-info">
+                      <div className="ranking-name">{member.name}</div>
+                      <div className="ranking-progress-zone">
+                        <div className="ranking-progress-text">
                           <span>Nv {lvl.level} · {lvl.name}</span><span>{lvl.progress}%</span>
                         </div>
-                        <div className="progress-wrap" style={{ height: 6 }}>
+                        <div className="progress-wrap" style={{ height: 5 }}>
                           <div className="progress-fill" style={{ width: `${lvl.progress}%`, background: member.color || 'var(--purple-500)' }} />
                         </div>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexShrink: 0 }}>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Tareas</div>
-                        <div style={{ fontWeight: 900, fontSize: 15, color: 'var(--blue-500)' }}>{stats.approved}</div>
+                    <div className="ranking-stats">
+                      <div className="ranking-stat-item hide-mobile">
+                        <div className="stat-label">Tareas</div>
+                        <div className="stat-val val-blue">{stats.approved}</div>
                       </div>
-                      {stats.avgRating > 0 && (
-                        <div style={{ textAlign: 'center' }}>
-                          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Rating</div>
-                          <div style={{ fontWeight: 900, fontSize: 15, color: 'var(--amber-600)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                            <Star size={13} fill="var(--amber-400)" color="var(--amber-400)" />{stats.avgRating}
-                          </div>
-                        </div>
-                      )}
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Puntos</div>
-                        <div style={{ fontWeight: 900, fontSize: 18, color: 'var(--purple-600)' }}>{member.total_points || 0}</div>
-                        <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{available} disp.</div>
+                      <div className="ranking-stat-item">
+                        <div className="stat-label">Puntos</div>
+                        <div className="stat-val val-purple">{member.total_points || 0}</div>
                       </div>
                     </div>
                   </div>

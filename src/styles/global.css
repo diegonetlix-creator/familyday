@@ -838,9 +838,9 @@ textarea.form-input { resize: vertical; min-height: 80px; }
   border-radius: var(--r-md);
   color: rgba(255,255,255,.45);
   text-decoration: none;
-  font-size: 9px;
+  font-size: 8.5px;
   font-weight: 700;
-  letter-spacing: .02em;
+  letter-spacing: .01em;
   transition: var(--transition);
   position: relative;
   cursor: pointer;
@@ -848,6 +848,12 @@ textarea.form-input { resize: vertical; min-height: 80px; }
   border: none;
   font-family: inherit;
   -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 380px) {
+  .bottom-nav-item { font-size: 7.5px; padding: 4px 2px; }
+  .bottom-nav-icon-wrap { width: 30px; height: 26px; }
+  .bottom-nav-icon-wrap svg { width: 18px; height: 18px; }
 }
 
 .bottom-nav-item.active {
@@ -904,6 +910,38 @@ textarea.form-input { resize: vertical; min-height: 80px; }
 @media (max-width: 600px) {
   /* Bottom nav visible on mobile */
   .bottom-nav { display: block; }
+
+  /* Leaderboard Responsive */
+  .leaderboard-podium-section {
+    display: flex; justify-content: center; margin-bottom: 24px;
+    width: 100%;
+  }
+  .podium-card { padding: 20px 10px !important; width: 100%; overflow: hidden; }
+  .podium-wrap { align-items: flex-end; gap: 8px !important; display: flex; justify-content: center; }
+  .podium-col { flex: 1; min-width: 0; }
+  .podium-name { font-size: 11px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70px; }
+  .podium-points { font-size: 14px !important; font-weight: 950 !important; }
+  .podium-level-badge { font-size: 9px !important; padding: 1px 5px !important; }
+  .podium-block { width: 100% !important; min-width: 50px; border-radius: 8px 8px 0 0 !important; display: flex; align-items: center; justify-content: center; }
+  .medal-icon { font-size: 18px !important; }
+  .crown-icon { font-size: 18px !important; }
+
+  .ranking-row {
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+    padding: 10px 12px !important;
+    align-items: center;
+  }
+  .ranking-rank { width: 24px !important; font-size: 16px !important; }
+  .ranking-avatar { width: 36px !important; height: 36px !important; font-size: 14px !important; }
+  .ranking-info { flex: 1; min-width: 0; }
+  .ranking-name { font-size: 13px !important; margin-bottom: 2px !important; }
+  .ranking-progress-text { font-size: 9px !important; }
+  .ranking-stats { flex-shrink: 0; display: flex; gap: 10px; align-items: center; }
+  .ranking-stat-item { text-align: center; }
+  .stat-label { font-size: 10px !important; }
+  .stat-val { font-size: 14px !important; font-weight: 900 !important; }
+  .hide-mobile { display: none !important; }
 
   /* Hide sidebar hamburger menu on mobile – bottom nav replaces it */
   .mobile-header {

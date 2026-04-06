@@ -24,6 +24,7 @@ function XpRing({ progress, size = 44, color = '#7c3aed' }) {
 export default function Layout() {
   const [open, setOpen] = useState(false)
   const [member, setMember] = useState(null)
+  const [members, setMembers] = useState([])
   const [pendingCount, setPendingCount] = useState(0)
   const location = useLocation()
   const navigate = useNavigate()
@@ -35,8 +36,9 @@ export default function Layout() {
   const loadData = async () => {
     try {
       if (currentUser) setMember(currentUser)
-      const [members, pending] = await Promise.all([FamilyMember.list(), TaskCompletion.countPending()])
-      const activeMember = currentUser ? (members.find(m => m.id === (currentUser.userId || currentUser.id)) || currentUser) : (members[0] || currentUser)
+      const [allM, pending] = await Promise.all([FamilyMember.list(), TaskCompletion.countPending()])
+      setMembers(allM)
+      const activeMember = currentUser ? (allM.find(m => m.id === (currentUser.userId || currentUser.id)) || currentUser) : (allM[0] || currentUser)
       setMember(activeMember)
       setPendingCount(pending)
       if (currentUser && activeMember && currentUser.family_id !== activeMember.family_id) {
@@ -55,7 +57,10 @@ export default function Layout() {
 
   const levelInfo = member ? getLevelInfo(member.total_points || 0) : null
   const currentRole = member?.role || currentUser?.role
-  const isPremium = member?.plan === 'premium' || currentRole === 'superadmin'
+  // isPremium: if admin profile has premium plan, or if superadmin, or if any admin in current family members has premium plan
+  const isPremium = currentRole === 'superadmin' || 
+                    member?.plan === 'premium' || 
+                    (members.some(m => m.role === 'admin' && m.plan === 'premium'))
 
   const navItems = currentRole === 'superadmin' ? [
     { to: '/superadmin',  icon: Trophy,          label: 'Panel SuperAdmin' },
@@ -79,15 +84,22 @@ export default function Layout() {
     { to: '/settings',   icon: Settings,         label: 'Ajustes' },
   ] : currentRole === 'child' ? [
     { to: '/dashboard',  icon: LayoutDashboard,  label: 'Inicio' },
-    { to: '/my-tasks',   icon: CheckSquare,      label: 'Mis Tareas' },
+    { to: '/my-tasks',   icon: CheckSquare,      label: 'Tareas' },
     { to: '/rewards',    icon: Gift,             label: 'Premios' },
     { to: '/leaderboard',icon: Trophy,           label: 'Ranking' },
+    ...(isPremium ? [
+      { to: '/teacher',   icon: Bot,             label: 'Teacher' }
+    ] : []),
+    { to: '/settings',   icon: Settings,         label: 'Ajustes' }
   ] : [
     { to: '/dashboard',  icon: LayoutDashboard,  label: 'Inicio' },
-    { to: '/tasks',      icon: ClipboardList,    label: 'Tareas' },
     { to: '/review',     icon: Star,             label: 'Revisar', badge: pendingCount },
-    { to: '/rewards',    icon: Gift,             label: 'Premios' },
+    { to: '/leaderboard',icon: Trophy,           label: 'Ranking' },
+    ...(isPremium ? [
+      { to: '/teacher',   icon: Bot,             label: 'Teacher' }
+    ] : []),
     { to: '/members',    icon: Users,            label: 'Familia' },
+    { to: '/settings',   icon: Settings,         label: 'Ajustes' }
   ]
 
   const SidebarContent = () => (
