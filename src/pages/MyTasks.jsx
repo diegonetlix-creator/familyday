@@ -211,7 +211,7 @@ export default function MyTasks() {
       if (msg.includes('401') || msg.includes('403') || msg.includes('JWT') || msg.includes('token')) {
         // Session expired — can't recover automatically
         alert('Tu sesión ha expirado. Por favor vuelve a iniciar sesión.')
-        import('../lib/auth.js').then(({ Auth }) => Auth.logout())
+        Auth.logout()
       } else {
         alert('Error al guardar la tarea. Verifica tu conexión e inténtalo de nuevo.')
       }
