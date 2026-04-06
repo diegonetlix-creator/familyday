@@ -3,6 +3,7 @@ import { Link, Navigate } from 'react-router-dom'
 import { Auth } from '../lib/auth.js'
 import { TrendingUp, ArrowRight, Zap, Plus, Gift, Trophy, Clock } from 'lucide-react'
 import { Task, TaskCompletion, FamilyMember, Reward, getLevelInfo, CATEGORY_EMOJI, STATUS_LABEL } from '../lib/store.js'
+import { useRealtime } from '../lib/realtime.js'
 
 function StatCard({ label, value, sub, subClass, barPct, barColor, accent }) {
   return (
@@ -34,6 +35,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { loadAll() }, [])
+  useRealtime(['fd_tasks', 'fd_completions', 'fd_members', 'fd_rewards'], () => loadAll())
 
   const loadAll = async () => {
     const timeout = setTimeout(() => {

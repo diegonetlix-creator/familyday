@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, X, Lock, ShoppingBag, Check } from 'lucide-react'
 import { Reward, RewardRedemption, FamilyMember, REWARD_CATEGORY_EMOJI, REWARD_CATEGORY_BG } from '../lib/store.js'
 import { Auth } from '../lib/auth.js'
+import { useRealtime } from '../lib/realtime.js'
 
 const CAT_LABELS = { 
   entretenimiento: 'Entretenimiento', 
@@ -186,6 +187,7 @@ export default function Rewards() {
   const [tab, setTab] = useState('rewards')
 
   useEffect(() => { loadData() }, [])
+  useRealtime(['fd_rewards', 'fd_redemptions', 'fd_members'], () => loadData())
 
   const loadData = async () => {
     setLoading(true)

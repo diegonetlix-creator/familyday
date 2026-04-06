@@ -3,6 +3,7 @@ import { Plus, Search, Edit2, Trash2, Zap, Star, ToggleLeft, ToggleRight } from 
 import { Task, FamilyMember, CATEGORY_EMOJI, CATEGORY_LABEL, DIFFICULTY_LABEL, FREQUENCY_LABEL } from '../lib/store.js'
 import { Auth } from '../lib/auth.js'
 import TaskFormModal from '../components/TaskFormModal.jsx'
+import { useRealtime } from '../lib/realtime.js'
 
 export default function Tasks() {
   const [tasks, setTasks]       = useState([])
@@ -17,6 +18,7 @@ export default function Tasks() {
   const currentUser = Auth.getCurrentUser()
 
   useEffect(() => { loadData() }, [])
+  useRealtime(['fd_tasks', 'fd_members'], () => loadData())
 
   const loadData = async () => {
     setLoading(true)

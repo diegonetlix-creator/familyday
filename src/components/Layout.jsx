@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, ClipboardList, Users, CheckSquare, Star, Gift, Trophy, Menu, X, Home, LogOut, Bot, Settings } from 'lucide-react'
 import { FamilyMember, TaskCompletion, getLevelInfo } from '../lib/store.js'
 import { Auth } from '../lib/auth.js'
+import { useRealtime } from '../lib/realtime.js'
 
 function XpRing({ progress, size = 44, color = '#7c3aed' }) {
   const r = (size - 6) / 2
@@ -31,6 +32,9 @@ export default function Layout() {
   const currentUser = Auth.getCurrentUser()
 
   useEffect(() => { loadData() }, [])
+  // Realtime: reload when completions or members change (badge counter + profile)
+  useRealtime(['fd_completions', 'fd_members'], () => loadData())
+
   useEffect(() => { if (open) setOpen(false) }, [location.pathname])
 
   const loadData = async () => {

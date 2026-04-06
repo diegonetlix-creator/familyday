@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { CheckCircle, XCircle, Eye, X, Image as ImageIcon, Star } from 'lucide-react'
 import { TaskCompletion, FamilyMember, STATUS_LABEL } from '../lib/store.js'
+import { useRealtime } from '../lib/realtime.js'
 
 function StarRating({ value, onChange }) {
   const [hover, setHover] = useState(0)
@@ -129,6 +130,7 @@ export default function Review() {
   const [reviewing, setReviewing] = useState(null)
 
   useEffect(() => { loadData() }, [])
+  useRealtime(['fd_completions', 'fd_members'], () => loadData())
 
   const loadData = async () => {
     setLoading(true)

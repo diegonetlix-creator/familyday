@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Trophy, CheckCircle, Star, TrendingUp } from 'lucide-react'
 import { FamilyMember, TaskCompletion, getLevelInfo } from '../lib/store.js'
+import { useRealtime } from '../lib/realtime.js'
 
 function XpRingPodium({ progress, size, color, label, avatarUrl }) {
   const r   = (size - 6) / 2
@@ -30,6 +31,7 @@ export default function Leaderboard() {
   const [loading,     setLoading]     = useState(true)
 
   useEffect(() => { loadData() }, [])
+  useRealtime(['fd_members', 'fd_completions'], () => loadData())
 
   const loadData = async () => {
     setLoading(true)

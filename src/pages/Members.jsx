@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, Crown, X, Clock, Search, UserCheck, UserX } from 'lucide-react'
 import { FamilyMember, TaskCompletion, getLevelInfo, MEMBER_COLORS } from '../lib/store.js'
 import { Auth } from '../lib/auth.js'
+import { useRealtime } from '../lib/realtime.js'
 
 // ─── Modal: Buscar y vincular miembro ────────────────────────────────────────
 function LinkMemberModal({ onClose, onSuccess, currentFamilyId, existingMemberEmails, isFreePlan, adminCount, childCount }) {
@@ -307,6 +308,7 @@ export default function Members() {
   const hasNoFamily = !currentFamilyId && currentUser?.role === 'admin'
 
   useEffect(() => { loadData() }, [])
+  useRealtime(['fd_members', 'fd_completions'], () => loadData())
 
   const showToast = (text, type = 'success') => {
     setToast({ text, type })

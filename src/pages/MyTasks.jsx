@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Search, CheckCircle, Clock, Camera, X, Send } from 'lucide-react'
 import { Task, TaskCompletion, FamilyMember, CATEGORY_EMOJI, CATEGORY_LABEL, DIFFICULTY_LABEL, FREQUENCY_LABEL } from '../lib/store.js'
 import { Auth } from '../lib/auth.js'
+import { useRealtime } from '../lib/realtime.js'
 
 function CompleteModal({ task, members, onSubmit, onClose }) {
   const [memberId, setMemberId]     = useState('')
@@ -179,6 +180,7 @@ export default function MyTasks() {
   const [sent, setSent]             = useState(false)
 
   useEffect(() => { loadData() }, [])
+  useRealtime(['fd_tasks', 'fd_completions', 'fd_members'], () => loadData())
 
   const loadData = async () => {
     setLoading(true)
